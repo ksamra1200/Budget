@@ -1,13 +1,17 @@
 import { useMemo, useState } from "react";
 import { useBudgetData } from "./storage";
-import { currentMonthKey, monthKeyOf } from "./utils";
+import { currentMonthKey, downloadCsv, formatMonthLabel, monthKeyOf, shiftMonth } from "./utils";
 import { MonthNav } from "./components/MonthNav";
 import { StatTile } from "./components/StatTile";
 import { CategoryMeter } from "./components/CategoryMeter";
 import { CategoryManager } from "./components/CategoryManager";
 import { TransactionForm } from "./components/TransactionForm";
 import { TransactionList } from "./components/TransactionList";
+import { SavingsGoals } from "./components/SavingsGoals";
+import { TrendChart, type MonthlyTotal } from "./components/TrendChart";
 import type { TransactionType } from "./types";
+
+const TREND_MONTHS = 6;
 
 export default function App() {
   const { data, update } = useBudgetData();
@@ -37,6 +41,29 @@ export default function App() {
     }
     return map;
   }, [monthTransactions]);
+
+  const trendMonths = useMemo<MonthlyTotal[]>(() => {
+    const keys: string[] = [];
+    for (let i = TREND_MONTHS - 1; i >= 0; i--) keys.push(shiftMonth(monthKey, -i));
+
+    const totals = new Map<string, { income: number; expense: number }>(
+      keys.map((k) => [k, { income: 0, expense: 0 }]),
+    );
+    for (const t of data.transactions) {
+      const k = monthKeyOf(t.date);
+      const bucket = totals.get(k);
+      if (!bucket) continue;
+      if (t.type === "income") bucket.income += t.amount;
+      else bucket.expense += t.amount;
+    }
+
+    return keys.map((k) => ({
+      key: k,
+      label: formatMonthLabel(k).split(" ")[0].slice(0, 3),
+      income: totals.get(k)!.income,
+      expense: totals.get(k)!.expense,
+    }));
+  }, [data.transactions, monthKey]);
 
   function addCategory(name: string, budget: number) {
     update((prev) => ({
@@ -79,6 +106,45 @@ export default function App() {
     }));
   }
 
+  function addGoal(name: string, target: number) {
+    update((prev) => ({
+      ...prev,
+      goals: [...prev.goals, { id: crypto.randomUUID(), name, target, saved: 0 }],
+    }));
+  }
+
+  function updateGoalSaved(id: string, saved: number) {
+    update((prev) => ({
+      ...prev,
+      goals: prev.goals.map((g) => (g.id === id ? { ...g, saved } : g)),
+    }));
+  }
+
+  function removeGoal(id: string) {
+    update((prev) => ({
+      ...prev,
+      goals: prev.goals.filter((g) => g.id !== id),
+    }));
+  }
+
+  function exportCsv() {
+    const categoryName = (id: string | null) =>
+      data.categories.find((c) => c.id === id)?.name ?? "";
+    const rows = [
+      ["Date", "Type", "Category", "Amount", "Note"],
+      ...[...data.transactions]
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((t) => [
+          t.date,
+          t.type,
+          t.type === "income" ? "" : categoryName(t.categoryId),
+          t.amount.toFixed(2),
+          t.note,
+        ]),
+    ];
+    downloadCsv(`budget-transactions-${monthKey}.csv`, rows);
+  }
+
   return (
     <>
       <header className="app-header">
@@ -95,6 +161,11 @@ export default function App() {
           tone={totals.remaining >= 0 ? "positive" : "negative"}
         />
       </div>
+
+      <section className="card">
+        <h2>Income vs. expenses</h2>
+        <TrendChart months={trendMonths} />
+      </section>
 
       <section className="card">
         <h2>Budget by category</h2>
@@ -118,13 +189,25 @@ export default function App() {
       </section>
 
       <section className="card">
-        <h2>Transactions this month</h2>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <h2 style={{ margin: 0 }}>Transactions this month</h2>
+          <button type="button" className="secondary" onClick={exportCsv}>
+            Export CSV
+          </button>
+        </div>
         <TransactionList
           transactions={monthTransactions}
           categories={data.categories}
           onRemove={removeTransaction}
         />
       </section>
+
+      <SavingsGoals
+        goals={data.goals}
+        onAdd={addGoal}
+        onUpdateSaved={updateGoalSaved}
+        onRemove={removeGoal}
+      />
 
       <CategoryManager
         categories={data.categories}

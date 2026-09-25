@@ -16,7 +16,15 @@ export interface Transaction {
   note: string;
 }
 
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  target: number;
+  saved: number;
+}
+
 export interface BudgetData {
   categories: Category[];
   transactions: Transaction[];
+  goals: SavingsGoal[];
 }

@@ -11,6 +11,7 @@ const DEFAULT_DATA: BudgetData = {
     { id: crypto.randomUUID(), name: "Entertainment", budget: 150 },
   ],
   transactions: [],
+  goals: [],
 };
 
 function load(): BudgetData {
@@ -21,7 +22,7 @@ function load(): BudgetData {
     if (!Array.isArray(parsed.categories) || !Array.isArray(parsed.transactions)) {
       return DEFAULT_DATA;
     }
-    return parsed;
+    return { ...parsed, goals: Array.isArray(parsed.goals) ? parsed.goals : [] };
   } catch {
     return DEFAULT_DATA;
   }
