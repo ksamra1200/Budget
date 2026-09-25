@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 
 // Firebase's web config values are not secret - they identify the project,
 // but access is controlled entirely by Firestore security rules.
@@ -16,4 +16,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// Some networks (restrictive proxies, certain corporate/VPN setups) block or
+// break Firestore's default streaming connection. Auto-detecting long-polling
+// makes sync resilient to that without affecting normal connections.
+export const db = initializeFirestore(app, {
+  experimentalAutoDetectLongPolling: true,
+});
