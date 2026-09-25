@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useBudgetData } from "./storage";
+import { useCloudBudgetData } from "./cloudStorage";
 import { currentMonthKey, downloadCsv, formatMonthLabel, monthKeyOf, shiftMonth } from "./utils";
 import { MonthNav } from "./components/MonthNav";
 import { StatTile } from "./components/StatTile";
@@ -13,8 +13,8 @@ import type { TransactionType } from "./types";
 
 const TREND_MONTHS = 6;
 
-export default function App() {
-  const { data, update } = useBudgetData();
+export function BudgetApp({ uid, onSignOut }: { uid: string; onSignOut: () => void }) {
+  const { data, loading, update } = useCloudBudgetData(uid);
   const [monthKey, setMonthKey] = useState(currentMonthKey());
 
   const monthTransactions = useMemo(
@@ -145,12 +145,22 @@ export default function App() {
     downloadCsv(`budget-transactions-${monthKey}.csv`, rows);
   }
 
+  if (loading) {
+    return <p className="empty-state" style={{ textAlign: "center", padding: 40 }}>Loading your budget…</p>;
+  }
+
   return (
     <>
       <header className="app-header">
         <h1 className="app-title">Budget</h1>
         <MonthNav monthKey={monthKey} onChange={setMonthKey} />
       </header>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+        <button type="button" className="secondary" onClick={onSignOut}>
+          Sign out
+        </button>
+      </div>
 
       <div className="stat-row">
         <StatTile label="Income" value={totals.income} />
