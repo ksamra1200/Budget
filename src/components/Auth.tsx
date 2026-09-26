@@ -64,56 +64,56 @@ export function AuthScreen() {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <h1 className="app-title" style={{ marginBottom: 4 }}>
-          Budget
-        </h1>
-        <p className="empty-state" style={{ marginBottom: 16, padding: 0 }}>
+        <h1 className="app-title auth-title">Budget</h1>
+        <p className="empty-state auth-subtitle">
           {mode === "signin"
             ? "Sign in to sync your budget across devices."
             : "Create an account to sync your budget across devices."}
         </p>
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div className="field">
-            <label htmlFor="auth-email">Email</label>
-            <input
-              id="auth-email"
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="auth-fields">
+            <div className="field">
+              <label htmlFor="auth-email">Email</label>
+              <input
+                id="auth-email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="auth-password">Password</label>
+              <input
+                id="auth-password"
+                type="password"
+                required
+                minLength={6}
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="field">
-            <label htmlFor="auth-password">Password</label>
-            <input
-              id="auth-password"
-              type="password"
-              required
-              minLength={6}
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          {error && (
-            <p style={{ color: "var(--status-critical)", fontSize: 12, margin: 0 }}>{error}</p>
-          )}
+          {error && <p className="auth-error">{error}</p>}
           <button type="submit" className="primary" disabled={busy}>
             {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
           </button>
         </form>
-        <button
-          type="button"
-          className="secondary"
-          style={{ marginTop: 12, width: "100%" }}
-          onClick={() => {
-            setMode(mode === "signin" ? "signup" : "signin");
-            setError(null);
-          }}
-        >
-          {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
-        </button>
+        <div className="auth-divider">
+          <button
+            type="button"
+            className="secondary"
+            style={{ width: "100%" }}
+            onClick={() => {
+              setMode(mode === "signin" ? "signup" : "signin");
+              setError(null);
+            }}
+          >
+            {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
+          </button>
+        </div>
       </div>
     </div>
   );
