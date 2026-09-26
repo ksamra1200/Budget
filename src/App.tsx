@@ -1,24 +1,28 @@
 import { useMemo, useState } from "react";
+import type { User } from "firebase/auth";
 import { useCloudBudgetData } from "./cloudStorage";
 import { currentMonthKey, downloadCsv, formatMonthLabel, monthKeyOf, shiftMonth } from "./utils";
-import { MonthNav } from "./components/MonthNav";
-import { StatTile } from "./components/StatTile";
-import { CategoryMeter } from "./components/CategoryMeter";
-import { CategoryManager } from "./components/CategoryManager";
-import { TransactionForm } from "./components/TransactionForm";
-import { TransactionList } from "./components/TransactionList";
-import { SavingsGoals } from "./components/SavingsGoals";
-import { ThemeToggle } from "./components/ThemeToggle";
-import { TrendChart, type MonthlyTotal } from "./components/TrendChart";
 import { useTheme } from "./useTheme";
+import { Dashboard } from "./sections/Dashboard";
+import { ThisMonth } from "./sections/ThisMonth";
+import { Categories } from "./sections/Categories";
+import { Settings } from "./components/Settings";
+import type { MonthlyTotal } from "./components/TrendChart";
 import type { CategoryMode, TransactionType } from "./types";
 
 const TREND_MONTHS = 6;
 
-export function BudgetApp({ uid, onSignOut }: { uid: string; onSignOut: () => void }) {
-  const { data, loading, update } = useCloudBudgetData(uid);
+type Section = "dashboard" | "thisMonth" | "categories" | "settings";
+
+export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => void }) {
+  const { data, loading, update } = useCloudBudgetData(user.uid);
   const [monthKey, setMonthKey] = useState(currentMonthKey());
+  const [section, setSection] = useState<Section>("dashboard");
+  const [displayName, setDisplayName] = useState(user.displayName ?? "");
   const { theme, toggleTheme } = useTheme();
+
+  const firstName = displayName.trim().split(/\s+/)[0];
+  const greeting = firstName ? `Hey, ${firstName}!` : "Hey there!";
 
   const monthTransactions = useMemo(
     () => data.transactions.filter((t) => monthKeyOf(t.date) === monthKey),
@@ -160,82 +164,64 @@ export function BudgetApp({ uid, onSignOut }: { uid: string; onSignOut: () => vo
   return (
     <>
       <header className="app-header">
-        <h1 className="app-title">Budget</h1>
-        <MonthNav monthKey={monthKey} onChange={setMonthKey} />
+        <h1 className="app-title">{greeting}</h1>
+        <select
+          className="section-select"
+          value={section}
+          onChange={(e) => setSection(e.target.value as Section)}
+          aria-label="Section"
+        >
+          <option value="dashboard">Dashboard</option>
+          <option value="thisMonth">This Month</option>
+          <option value="categories">Categories</option>
+          <option value="settings">Settings</option>
+        </select>
       </header>
 
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        <button type="button" className="secondary" onClick={onSignOut}>
-          Sign out
-        </button>
-      </div>
-
-      <div className="stat-row">
-        <StatTile label="Income" value={totals.income} />
-        <StatTile label="Expenses" value={totals.expenses} />
-        <StatTile
-          label="Remaining"
-          value={totals.remaining}
-          tone={totals.remaining >= 0 ? "positive" : "negative"}
+      {section === "dashboard" && (
+        <Dashboard
+          totals={totals}
+          totalSaved={totalSaved}
+          trendMonths={trendMonths}
+          categories={data.categories}
+          spentByCategory={spentByCategory}
+          goals={data.goals}
+          onAddCategory={addCategory}
+          onAddGoal={addGoal}
+          onUpdateGoalSaved={updateGoalSaved}
+          onRemoveGoal={removeGoal}
         />
-        <StatTile label="Savings" value={totalSaved} tone={totalSaved > 0 ? "positive" : undefined} />
-      </div>
+      )}
 
-      <section className="card">
-        <h2>Income vs. expenses</h2>
-        <TrendChart months={trendMonths} />
-      </section>
-
-      <section className="card">
-        <h2>Budget by category</h2>
-        {data.categories.length === 0 ? (
-          <p className="empty-state">Add a category below to start tracking.</p>
-        ) : (
-          data.categories.map((c) => (
-            <CategoryMeter
-              key={c.id}
-              name={c.name}
-              spent={spentByCategory.get(c.id) ?? 0}
-              budget={c.budget}
-              mode={c.mode}
-            />
-          ))
-        )}
-      </section>
-
-      <section className="card">
-        <h2>Add a transaction</h2>
-        <TransactionForm categories={data.categories} onAdd={addTransaction} />
-      </section>
-
-      <section className="card">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <h2 style={{ margin: 0 }}>Transactions this month</h2>
-          <button type="button" className="secondary" onClick={exportCsv}>
-            Export CSV
-          </button>
-        </div>
-        <TransactionList
+      {section === "thisMonth" && (
+        <ThisMonth
+          monthKey={monthKey}
+          onMonthChange={setMonthKey}
           transactions={monthTransactions}
           categories={data.categories}
-          onRemove={removeTransaction}
+          onAddTransaction={addTransaction}
+          onRemoveTransaction={removeTransaction}
+          onExportCsv={exportCsv}
         />
-      </section>
+      )}
 
-      <SavingsGoals
-        goals={data.goals}
-        onAdd={addGoal}
-        onUpdateSaved={updateGoalSaved}
-        onRemove={removeGoal}
-      />
+      {section === "categories" && (
+        <Categories
+          categories={data.categories}
+          onUpdateBudget={updateCategoryBudget}
+          onRemove={removeCategory}
+        />
+      )}
 
-      <CategoryManager
-        categories={data.categories}
-        onAdd={addCategory}
-        onUpdateBudget={updateCategoryBudget}
-        onRemove={removeCategory}
-      />
+      {section === "settings" && (
+        <Settings
+          user={user}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onSignOut={onSignOut}
+          onDisplayNameChange={setDisplayName}
+        />
+      )}
     </>
   );
 }

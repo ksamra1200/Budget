@@ -107,6 +107,18 @@ body {
   background: var(--gridline);
 }
 
+.section-select {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 .month-label {
   font-size: 14px;
   font-weight: 600;
@@ -261,6 +273,9 @@ form.inline-form {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.inline-form .field {
   flex: 1 1 120px;
   min-width: 100px;
 }
@@ -344,6 +359,13 @@ button.icon-button:hover {
   background: var(--gridline);
 }
 
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
 .tx-list {
   list-style: none;
   margin: 0;
@@ -414,6 +436,17 @@ button.icon-button:hover {
 .category-row .name {
   font-size: 13px;
   font-weight: 600;
+}
+
+.category-mode-badge {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--gridline);
+  border-radius: 4px;
+  padding: 2px 6px;
+  vertical-align: middle;
 }
 
 .category-row .budget-input {
@@ -568,10 +601,6 @@ button.icon-button:hover {
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-
-.auth-fields .field {
-  flex: none;
 }
 
 .auth-error {

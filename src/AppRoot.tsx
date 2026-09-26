@@ -16,5 +16,5 @@ export default function AppRoot() {
     return <AuthScreen />;
   }
 
-  return <BudgetApp uid={user.uid} onSignOut={signOutUser} />;
+  return <BudgetApp user={user} onSignOut={signOutUser} />;
 }

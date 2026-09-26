@@ -1,16 +1,10 @@
 import { useState } from "react";
-import type { Category, CategoryMode } from "../types";
+import type { CategoryMode } from "../types";
 
-export function CategoryManager({
-  categories,
+export function AddCategoryForm({
   onAdd,
-  onUpdateBudget,
-  onRemove,
 }: {
-  categories: Category[];
   onAdd: (name: string, budget: number, mode: CategoryMode) => void;
-  onUpdateBudget: (id: string, budget: number) => void;
-  onRemove: (id: string) => void;
 }) {
   const [name, setName] = useState("");
   const [budget, setBudget] = useState("");
@@ -28,39 +22,8 @@ export function CategoryManager({
 
   return (
     <section className="card">
-      <h2>Categories</h2>
-      {categories.length === 0 ? (
-        <p className="empty-state">No categories yet. Add one below.</p>
-      ) : (
-        categories.map((c) => (
-          <div className="category-row" key={c.id}>
-            <span className="name">{c.name}</span>
-            <div className="budget-input">
-              <div className="amount-input-wrap compact">
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={c.budget === 0 ? "" : c.budget}
-                  placeholder="0"
-                  onChange={(e) => onUpdateBudget(c.id, Number(e.target.value) || 0)}
-                  aria-label={`Monthly budget for ${c.name}`}
-                />
-              </div>
-              <button
-                type="button"
-                className="icon-button"
-                aria-label={`Delete ${c.name}`}
-                onClick={() => onRemove(c.id)}
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        ))
-      )}
-
-      <form className="inline-form" onSubmit={handleSubmit} style={{ marginTop: 14 }}>
+      <h2>Add a category</h2>
+      <form className="inline-form" onSubmit={handleSubmit}>
         <div className="field" style={{ flex: "2 1 140px" }}>
           <label htmlFor="cat-name">New category</label>
           <input

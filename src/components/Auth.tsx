@@ -4,6 +4,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
   type User,
 } from "firebase/auth";
 import { auth } from "../firebase";
@@ -39,6 +40,7 @@ function friendlyError(err: unknown): string {
 
 export function AuthScreen() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +54,8 @@ export function AuthScreen() {
       if (mode === "signin") {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const credential = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(credential.user, { displayName: name.trim() });
       }
     } catch (err) {
       setError(friendlyError(err));
@@ -72,6 +75,19 @@ export function AuthScreen() {
         </p>
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="auth-fields">
+            {mode === "signup" && (
+              <div className="field">
+                <label htmlFor="auth-name">Name</label>
+                <input
+                  id="auth-name"
+                  type="text"
+                  required
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+            )}
             <div className="field">
               <label htmlFor="auth-email">Email</label>
               <input
