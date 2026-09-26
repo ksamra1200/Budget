@@ -8,7 +8,7 @@
   --gridline: #e1e0d9;
   --baseline: #c3c2b7;
   --border: rgba(11, 11, 11, 0.1);
-  --series-1: #2a78d6; /* blue - neutral bars, income */
+  --accent: #1a8754; /* green - primary actions, income */
   --series-2: #eb6834; /* orange - expenses */
   --status-good: #0ca30c;
   --status-warning: #fab219;
@@ -27,7 +27,7 @@
     --gridline: #2c2c2a;
     --baseline: #383835;
     --border: rgba(255, 255, 255, 0.1);
-    --series-1: #3987e5;
+    --accent: #2fbf71;
     --series-2: #d95926;
     --status-good: #0ca30c;
     --status-warning: #fab219;
@@ -46,7 +46,7 @@
   --gridline: #2c2c2a;
   --baseline: #383835;
   --border: rgba(255, 255, 255, 0.1);
-  --series-1: #3987e5;
+  --accent: #2fbf71;
   --series-2: #d95926;
   --status-good: #0ca30c;
   --status-warning: #fab219;
@@ -283,12 +283,12 @@ form.inline-form {
 
 .field input:focus,
 .field select:focus {
-  outline: 2px solid var(--series-1);
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
 button.primary {
-  background: var(--series-1);
+  background: var(--accent);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -325,6 +325,23 @@ button.icon-button {
 button.icon-button:hover {
   background: var(--gridline);
   color: var(--status-critical);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  background: var(--gridline);
 }
 
 .tx-list {

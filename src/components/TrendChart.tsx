@@ -54,7 +54,7 @@ export function TrendChart({ months }: { months: MonthlyTotal[] }) {
     <div className="chart-wrap">
       <div className="chart-legend">
         <span className="item">
-          <span className="swatch" style={{ background: "var(--series-1)" }} />
+          <span className="swatch" style={{ background: "var(--accent)" }} />
           Income
         </span>
         <span className="item">
@@ -105,11 +105,11 @@ export function TrendChart({ months }: { months: MonthlyTotal[] }) {
           />
         )}
 
-        <path d={toPath(incomePoints)} fill="none" stroke="var(--series-1)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        <path d={toPath(incomePoints)} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
         <path d={toPath(expensePoints)} fill="none" stroke="var(--series-2)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
 
         {incomePoints.map(([x, y], i) => (
-          <circle key={`i-${i}`} cx={x} cy={y} r={i === hover ? 5 : 3} fill="var(--series-1)" />
+          <circle key={`i-${i}`} cx={x} cy={y} r={i === hover ? 5 : 3} fill="var(--accent)" />
         ))}
         {expensePoints.map(([x, y], i) => (
           <circle key={`e-${i}`} cx={x} cy={y} r={i === hover ? 5 : 3} fill="var(--series-2)" />
@@ -139,7 +139,7 @@ export function TrendChart({ months }: { months: MonthlyTotal[] }) {
         >
           <div className="tt-month">{hovered.label}</div>
           <div className="tt-row">
-            <span className="tt-dot" style={{ background: "var(--series-1)" }} />
+            <span className="tt-dot" style={{ background: "var(--accent)" }} />
             Income {formatCurrency(hovered.income)}
           </div>
           <div className="tt-row">

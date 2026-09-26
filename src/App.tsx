@@ -8,7 +8,9 @@ import { CategoryManager } from "./components/CategoryManager";
 import { TransactionForm } from "./components/TransactionForm";
 import { TransactionList } from "./components/TransactionList";
 import { SavingsGoals } from "./components/SavingsGoals";
+import { ThemeToggle } from "./components/ThemeToggle";
 import { TrendChart, type MonthlyTotal } from "./components/TrendChart";
+import { useTheme } from "./useTheme";
 import type { TransactionType } from "./types";
 
 const TREND_MONTHS = 6;
@@ -16,6 +18,7 @@ const TREND_MONTHS = 6;
 export function BudgetApp({ uid, onSignOut }: { uid: string; onSignOut: () => void }) {
   const { data, loading, update } = useCloudBudgetData(uid);
   const [monthKey, setMonthKey] = useState(currentMonthKey());
+  const { theme, toggleTheme } = useTheme();
 
   const monthTransactions = useMemo(
     () => data.transactions.filter((t) => monthKeyOf(t.date) === monthKey),
@@ -156,7 +159,8 @@ export function BudgetApp({ uid, onSignOut }: { uid: string; onSignOut: () => vo
         <MonthNav monthKey={monthKey} onChange={setMonthKey} />
       </header>
 
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         <button type="button" className="secondary" onClick={onSignOut}>
           Sign out
         </button>
