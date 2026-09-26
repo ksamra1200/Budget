@@ -68,15 +68,17 @@ export function TransactionForm({
 
       <div className="field" style={{ flex: "1 1 100px" }}>
         <label htmlFor="tx-amount">Amount</label>
-        <input
-          id="tx-amount"
-          type="number"
-          min="0"
-          step="0.01"
-          placeholder="0.00"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-        />
+        <div className="amount-input-wrap">
+          <input
+            id="tx-amount"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="field" style={{ flex: "1 1 130px" }}>

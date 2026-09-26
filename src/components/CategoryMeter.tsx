@@ -1,3 +1,4 @@
+import type { CategoryMode } from "../types";
 import { formatCurrency } from "../utils";
 
 function statusFor(pct: number): { key: "good" | "warning" | "critical"; label: string } {
@@ -10,22 +11,36 @@ export function CategoryMeter({
   name,
   spent,
   budget,
+  mode,
 }: {
   name: string;
   spent: number;
   budget: number;
+  mode: CategoryMode;
 }) {
   const pct = budget > 0 ? (spent / budget) * 100 : spent > 0 ? 100 : 0;
   const status = statusFor(pct);
-  const fillWidth = Math.min(100, pct);
+  const remaining = Math.max(0, budget - spent);
+
+  const fillWidth =
+    mode === "deplete"
+      ? budget > 0
+        ? Math.min(100, (remaining / budget) * 100)
+        : spent > 0
+          ? 0
+          : 100
+      : Math.min(100, pct);
+
+  const amountsLabel =
+    mode === "deplete"
+      ? `${formatCurrency(remaining)} left of ${formatCurrency(budget)}`
+      : `${formatCurrency(spent)} of ${formatCurrency(budget)}`;
 
   return (
     <div className="meter-row">
       <div className="meter-top">
         <span className="meter-name">{name}</span>
-        <span className="meter-amounts">
-          {formatCurrency(spent)} of {formatCurrency(budget)}
-        </span>
+        <span className="meter-amounts">{amountsLabel}</span>
       </div>
       <div
         className="meter-track"

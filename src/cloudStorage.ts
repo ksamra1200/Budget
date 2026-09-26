@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
-import type { BudgetData } from "./types";
+import type { BudgetData, Category } from "./types";
 
 const LOCAL_STORAGE_KEY = "budget-app-data";
 
@@ -9,8 +9,11 @@ const EMPTY_DATA: BudgetData = { categories: [], transactions: [], goals: [] };
 
 function normalize(raw: unknown): BudgetData {
   const r = (raw ?? {}) as Partial<BudgetData>;
+  const categories = Array.isArray(r.categories) ? r.categories : [];
   return {
-    categories: Array.isArray(r.categories) ? r.categories : [],
+    categories: categories.map(
+      (c): Category => ({ ...c, mode: c.mode === "deplete" ? "deplete" : "fill" }),
+    ),
     transactions: Array.isArray(r.transactions) ? r.transactions : [],
     goals: Array.isArray(r.goals) ? r.goals : [],
   };

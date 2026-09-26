@@ -1,8 +1,12 @@
+export type CategoryMode = "fill" | "deplete";
+
 export interface Category {
   id: string;
   name: string;
   /** Monthly budget limit for this category, in dollars. */
   budget: number;
+  /** "fill": bar fills up as you spend. "deplete": bar starts full and empties as you spend (e.g. an allowance). */
+  mode: CategoryMode;
 }
 
 export type TransactionType = "income" | "expense";

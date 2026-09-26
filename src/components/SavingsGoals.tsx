@@ -58,24 +58,27 @@ export function SavingsGoals({
                   {reached ? "Goal reached" : `${Math.round(pct)}% saved`}
                 </span>
                 <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={g.saved}
-                    onChange={(e) => onUpdateSaved(g.id, Number(e.target.value) || 0)}
-                    aria-label={`Amount saved for ${g.name}`}
-                    style={{
-                      width: 80,
-                      background: "var(--page-plane)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 8,
-                      padding: "4px 8px",
-                      fontSize: 12,
-                      color: "var(--text-primary)",
-                      fontFamily: "inherit",
-                    }}
-                  />
+                  <div className="amount-input-wrap compact">
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={g.saved === 0 ? "" : g.saved}
+                      placeholder="0"
+                      onChange={(e) => onUpdateSaved(g.id, Number(e.target.value) || 0)}
+                      aria-label={`Amount saved for ${g.name}`}
+                      style={{
+                        width: 90,
+                        background: "var(--page-plane)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 8,
+                        padding: "4px 8px 4px 20px",
+                        fontSize: 12,
+                        color: "var(--text-primary)",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                  </div>
                   <button
                     type="button"
                     className="icon-button"
@@ -104,15 +107,17 @@ export function SavingsGoals({
         </div>
         <div className="field">
           <label htmlFor="goal-target">Target amount</label>
-          <input
-            id="goal-target"
-            type="number"
-            min="0"
-            step="1"
-            placeholder="0"
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-          />
+          <div className="amount-input-wrap">
+            <input
+              id="goal-target"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="0"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+            />
+          </div>
         </div>
         <button type="submit" className="primary">
           Add

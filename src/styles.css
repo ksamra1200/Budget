@@ -117,7 +117,7 @@ body {
 
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin-bottom: 24px;
 }
@@ -423,14 +423,42 @@ button.icon-button:hover {
 }
 
 .category-row .budget-input input {
-  width: 90px;
+  width: 100px;
   background: var(--page-plane);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 6px 8px;
+  padding: 6px 8px 6px 20px;
   font-size: 13px;
   color: var(--text-primary);
   font-family: inherit;
+}
+
+.amount-input-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.amount-input-wrap::before {
+  content: "$";
+  position: absolute;
+  left: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.amount-input-wrap.compact::before {
+  left: 8px;
+  font-size: 12px;
+}
+
+.amount-input-wrap input {
+  width: 100%;
+}
+
+.field .amount-input-wrap input {
+  padding-left: 22px;
 }
 
 @media (max-width: 420px) {

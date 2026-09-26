@@ -11,7 +11,7 @@ import { SavingsGoals } from "./components/SavingsGoals";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { TrendChart, type MonthlyTotal } from "./components/TrendChart";
 import { useTheme } from "./useTheme";
-import type { TransactionType } from "./types";
+import type { CategoryMode, TransactionType } from "./types";
 
 const TREND_MONTHS = 6;
 
@@ -34,6 +34,11 @@ export function BudgetApp({ uid, onSignOut }: { uid: string; onSignOut: () => vo
     }
     return { income, expenses, remaining: income - expenses };
   }, [monthTransactions]);
+
+  const totalSaved = useMemo(
+    () => data.goals.reduce((sum, g) => sum + g.saved, 0),
+    [data.goals],
+  );
 
   const spentByCategory = useMemo(() => {
     const map = new Map<string, number>();
@@ -68,10 +73,10 @@ export function BudgetApp({ uid, onSignOut }: { uid: string; onSignOut: () => vo
     }));
   }, [data.transactions, monthKey]);
 
-  function addCategory(name: string, budget: number) {
+  function addCategory(name: string, budget: number, mode: CategoryMode) {
     update((prev) => ({
       ...prev,
-      categories: [...prev.categories, { id: crypto.randomUUID(), name, budget }],
+      categories: [...prev.categories, { id: crypto.randomUUID(), name, budget, mode }],
     }));
   }
 
@@ -174,6 +179,7 @@ export function BudgetApp({ uid, onSignOut }: { uid: string; onSignOut: () => vo
           value={totals.remaining}
           tone={totals.remaining >= 0 ? "positive" : "negative"}
         />
+        <StatTile label="Savings" value={totalSaved} tone={totalSaved > 0 ? "positive" : undefined} />
       </div>
 
       <section className="card">
@@ -192,6 +198,7 @@ export function BudgetApp({ uid, onSignOut }: { uid: string; onSignOut: () => vo
               name={c.name}
               spent={spentByCategory.get(c.id) ?? 0}
               budget={c.budget}
+              mode={c.mode}
             />
           ))
         )}
