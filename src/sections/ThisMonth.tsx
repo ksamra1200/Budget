@@ -1,14 +1,12 @@
 import { MonthNav } from "../components/MonthNav";
-import { TransactionForm } from "../components/TransactionForm";
 import { TransactionList } from "../components/TransactionList";
-import type { Category, Transaction, TransactionType } from "../types";
+import type { Category, Transaction } from "../types";
 
 export function ThisMonth({
   monthKey,
   onMonthChange,
   transactions,
   categories,
-  onAddTransaction,
   onRemoveTransaction,
   onExportCsv,
 }: {
@@ -16,13 +14,6 @@ export function ThisMonth({
   onMonthChange: (next: string) => void;
   transactions: Transaction[];
   categories: Category[];
-  onAddTransaction: (tx: {
-    date: string;
-    type: TransactionType;
-    amount: number;
-    categoryId: string | null;
-    note: string;
-  }) => void;
   onRemoveTransaction: (id: string) => void;
   onExportCsv: () => void;
 }) {
@@ -31,11 +22,6 @@ export function ThisMonth({
       <div style={{ display: "flex", justifyContent: "center", padding: "4px 0 16px" }}>
         <MonthNav monthKey={monthKey} onChange={onMonthChange} />
       </div>
-
-      <section className="card">
-        <h2>Add a transaction</h2>
-        <TransactionForm categories={categories} onAdd={onAddTransaction} />
-      </section>
 
       <section className="card">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>

@@ -1,21 +1,18 @@
 import { StatTile } from "../components/StatTile";
 import { CategoryMeter } from "../components/CategoryMeter";
-import { AddCategoryForm } from "../components/AddCategoryForm";
 import { TrendChart, type MonthlyTotal } from "../components/TrendChart";
-import type { Category, CategoryMode } from "../types";
+import type { Category } from "../types";
 
 export function Dashboard({
   totals,
   trendMonths,
   categories,
   spentByCategory,
-  onAddCategory,
 }: {
   totals: { income: number; expenses: number; remaining: number };
   trendMonths: MonthlyTotal[];
   categories: Category[];
   spentByCategory: Map<string, number>;
-  onAddCategory: (name: string, budget: number, mode: CategoryMode) => void;
 }) {
   return (
     <>
@@ -37,7 +34,7 @@ export function Dashboard({
       <section className="card">
         <h2>Budget by category</h2>
         {categories.length === 0 ? (
-          <p className="empty-state">Add a category below to start tracking.</p>
+          <p className="empty-state">Add a category from the Categories page to start tracking.</p>
         ) : (
           categories.map((c) => (
             <CategoryMeter
@@ -50,8 +47,6 @@ export function Dashboard({
           ))
         )}
       </section>
-
-      <AddCategoryForm onAdd={onAddCategory} />
     </>
   );
 }

@@ -8,6 +8,7 @@ import { ThisMonth } from "./sections/ThisMonth";
 import { Categories } from "./sections/Categories";
 import { Settings } from "./components/Settings";
 import { SectionMenu } from "./components/SectionMenu";
+import { AddTransactionFab } from "./components/AddTransactionFab";
 import type { MonthlyTotal } from "./components/TrendChart";
 import { SECTION_LABELS, type CategoryMode, type Section, type TransactionType } from "./types";
 
@@ -143,7 +144,6 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
           trendMonths={trendMonths}
           categories={data.categories}
           spentByCategory={spentByCategory}
-          onAddCategory={addCategory}
         />
       )}
 
@@ -153,7 +153,6 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
           onMonthChange={setMonthKey}
           transactions={monthTransactions}
           categories={data.categories}
-          onAddTransaction={addTransaction}
           onRemoveTransaction={removeTransaction}
           onExportCsv={exportCsv}
         />
@@ -171,6 +170,8 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
       {section === "settings" && (
         <Settings user={user} theme={theme} onToggleTheme={toggleTheme} onSignOut={onSignOut} />
       )}
+
+      <AddTransactionFab categories={data.categories} onAdd={addTransaction} />
     </>
   );
 }
