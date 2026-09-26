@@ -107,16 +107,62 @@ body {
   background: var(--gridline);
 }
 
-.section-select {
+.section-menu {
+  position: relative;
+}
+
+.hamburger-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--surface-1);
   border: 1px solid var(--border);
   color: var(--text-primary);
   border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 14px;
-  font-weight: 600;
-  font-family: inherit;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
+}
+
+.hamburger-button:hover {
+  background: var(--gridline);
+}
+
+.section-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 10;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(11, 11, 11, 0.12);
+  padding: 6px;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.section-menu-item {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 9px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.section-menu-item:hover {
+  background: var(--gridline);
+}
+
+.section-menu-item.active {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .month-label {
@@ -129,7 +175,7 @@ body {
 
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   margin-bottom: 24px;
 }

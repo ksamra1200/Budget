@@ -7,22 +7,17 @@ import { Dashboard } from "./sections/Dashboard";
 import { ThisMonth } from "./sections/ThisMonth";
 import { Categories } from "./sections/Categories";
 import { Settings } from "./components/Settings";
+import { SectionMenu } from "./components/SectionMenu";
 import type { MonthlyTotal } from "./components/TrendChart";
-import type { CategoryMode, TransactionType } from "./types";
+import { SECTION_LABELS, type CategoryMode, type Section, type TransactionType } from "./types";
 
 const TREND_MONTHS = 6;
-
-type Section = "dashboard" | "thisMonth" | "categories" | "settings";
 
 export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => void }) {
   const { data, loading, update } = useCloudBudgetData(user.uid);
   const [monthKey, setMonthKey] = useState(currentMonthKey());
   const [section, setSection] = useState<Section>("dashboard");
-  const [displayName, setDisplayName] = useState(user.displayName ?? "");
   const { theme, toggleTheme } = useTheme();
-
-  const firstName = displayName.trim().split(/\s+/)[0];
-  const greeting = firstName ? `Hey, ${firstName}!` : "Hey there!";
 
   const monthTransactions = useMemo(
     () => data.transactions.filter((t) => monthKeyOf(t.date) === monthKey),
@@ -38,11 +33,6 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
     }
     return { income, expenses, remaining: income - expenses };
   }, [monthTransactions]);
-
-  const totalSaved = useMemo(
-    () => data.goals.reduce((sum, g) => sum + g.saved, 0),
-    [data.goals],
-  );
 
   const spentByCategory = useMemo(() => {
     const map = new Map<string, number>();
@@ -118,27 +108,6 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
     }));
   }
 
-  function addGoal(name: string, target: number) {
-    update((prev) => ({
-      ...prev,
-      goals: [...prev.goals, { id: crypto.randomUUID(), name, target, saved: 0 }],
-    }));
-  }
-
-  function updateGoalSaved(id: string, saved: number) {
-    update((prev) => ({
-      ...prev,
-      goals: prev.goals.map((g) => (g.id === id ? { ...g, saved } : g)),
-    }));
-  }
-
-  function removeGoal(id: string) {
-    update((prev) => ({
-      ...prev,
-      goals: prev.goals.filter((g) => g.id !== id),
-    }));
-  }
-
   function exportCsv() {
     const categoryName = (id: string | null) =>
       data.categories.find((c) => c.id === id)?.name ?? "";
@@ -164,32 +133,17 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
   return (
     <>
       <header className="app-header">
-        <h1 className="app-title">{greeting}</h1>
-        <select
-          className="section-select"
-          value={section}
-          onChange={(e) => setSection(e.target.value as Section)}
-          aria-label="Section"
-        >
-          <option value="dashboard">Dashboard</option>
-          <option value="thisMonth">This Month</option>
-          <option value="categories">Categories</option>
-          <option value="settings">Settings</option>
-        </select>
+        <h1 className="app-title">{SECTION_LABELS[section]}</h1>
+        <SectionMenu section={section} onChange={setSection} />
       </header>
 
       {section === "dashboard" && (
         <Dashboard
           totals={totals}
-          totalSaved={totalSaved}
           trendMonths={trendMonths}
           categories={data.categories}
           spentByCategory={spentByCategory}
-          goals={data.goals}
           onAddCategory={addCategory}
-          onAddGoal={addGoal}
-          onUpdateGoalSaved={updateGoalSaved}
-          onRemoveGoal={removeGoal}
         />
       )}
 
@@ -210,17 +164,12 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
           categories={data.categories}
           onUpdateBudget={updateCategoryBudget}
           onRemove={removeCategory}
+          onAddCategory={addCategory}
         />
       )}
 
       {section === "settings" && (
-        <Settings
-          user={user}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          onSignOut={onSignOut}
-          onDisplayNameChange={setDisplayName}
-        />
+        <Settings user={user} theme={theme} onToggleTheme={toggleTheme} onSignOut={onSignOut} />
       )}
     </>
   );

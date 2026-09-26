@@ -20,15 +20,16 @@ export interface Transaction {
   note: string;
 }
 
-export interface SavingsGoal {
-  id: string;
-  name: string;
-  target: number;
-  saved: number;
-}
-
 export interface BudgetData {
   categories: Category[];
   transactions: Transaction[];
-  goals: SavingsGoal[];
 }
+
+export type Section = "dashboard" | "thisMonth" | "categories" | "settings";
+
+export const SECTION_LABELS: Record<Section, string> = {
+  dashboard: "Dashboard",
+  thisMonth: "This Month",
+  categories: "Categories",
+  settings: "Settings",
+};

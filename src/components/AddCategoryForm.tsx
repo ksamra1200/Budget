@@ -51,8 +51,8 @@ export function AddCategoryForm({
         <div className="field">
           <label htmlFor="cat-mode">Behavior</label>
           <select id="cat-mode" value={mode} onChange={(e) => setMode(e.target.value as CategoryMode)}>
-            <option value="fill">Fills up as you spend</option>
-            <option value="deplete">Empties as you spend</option>
+            <option value="fill">Ascending</option>
+            <option value="deplete">Descending</option>
           </select>
         </div>
         <button type="submit" className="primary">

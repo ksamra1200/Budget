@@ -5,7 +5,7 @@ import type { BudgetData, Category } from "./types";
 
 const LOCAL_STORAGE_KEY = "budget-app-data";
 
-const EMPTY_DATA: BudgetData = { categories: [], transactions: [], goals: [] };
+const EMPTY_DATA: BudgetData = { categories: [], transactions: [] };
 
 function normalize(raw: unknown): BudgetData {
   const r = (raw ?? {}) as Partial<BudgetData>;
@@ -15,7 +15,6 @@ function normalize(raw: unknown): BudgetData {
       (c): Category => ({ ...c, mode: c.mode === "deplete" ? "deplete" : "fill" }),
     ),
     transactions: Array.isArray(r.transactions) ? r.transactions : [],
-    goals: Array.isArray(r.goals) ? r.goals : [],
   };
 }
 

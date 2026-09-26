@@ -28,8 +28,7 @@ export function ThisMonth({
 }) {
   return (
     <>
-      <div className="app-header" style={{ padding: "4px 0 16px" }}>
-        <h2 style={{ margin: 0 }}>This Month</h2>
+      <div style={{ display: "flex", justifyContent: "center", padding: "4px 0 16px" }}>
         <MonthNav monthKey={monthKey} onChange={onMonthChange} />
       </div>
 

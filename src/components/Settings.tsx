@@ -28,13 +28,11 @@ export function Settings({
   theme,
   onToggleTheme,
   onSignOut,
-  onDisplayNameChange,
 }: {
   user: User;
   theme: "light" | "dark";
   onToggleTheme: () => void;
   onSignOut: () => void;
-  onDisplayNameChange: (name: string) => void;
 }) {
   const [name, setName] = useState(user.displayName ?? "");
   const [nameStatus, setNameStatus] = useState<string | null>(null);
@@ -55,7 +53,6 @@ export function Settings({
     setNameStatus(null);
     try {
       await updateProfile(user, { displayName: trimmed });
-      onDisplayNameChange(trimmed);
       setNameStatus("Saved.");
     } catch {
       setNameStatus("Couldn't save your name. Please try again.");

@@ -13,13 +13,13 @@ export function CategoryList({
     <section className="card">
       <h2>Categories</h2>
       {categories.length === 0 ? (
-        <p className="empty-state">No categories yet. Add one from the Dashboard.</p>
+        <p className="empty-state">No categories yet. Add one below.</p>
       ) : (
         categories.map((c) => (
           <div className="category-row" key={c.id}>
             <span className="name">
               {c.name}
-              {c.mode === "deplete" && <span className="category-mode-badge">Empties</span>}
+              {c.mode === "deplete" && <span className="category-mode-badge">Descending</span>}
             </span>
             <div className="budget-input">
               <div className="amount-input-wrap compact">
