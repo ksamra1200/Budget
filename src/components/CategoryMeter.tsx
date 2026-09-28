@@ -12,11 +12,14 @@ export function CategoryMeter({
   spent,
   budget,
   mode,
+  carried = 0,
 }: {
   name: string;
   spent: number;
   budget: number;
   mode: CategoryMode;
+  /** Rolled over from earlier months (already included in `budget`). */
+  carried?: number;
 }) {
   const pct = budget > 0 ? (spent / budget) * 100 : spent > 0 ? 100 : 0;
   const status = statusFor(pct);
@@ -56,6 +59,13 @@ export function CategoryMeter({
         <span className={`dot ${status.key}`} aria-hidden="true" />
         <span>
           {status.label} · {Math.round(pct)}%
+          {carried !== 0 && (
+            <span className="meter-carried">
+              {" "}
+              · {carried > 0 ? "+" : "−"}
+              {formatCurrency(Math.abs(carried))} rolled over
+            </span>
+          )}
         </span>
       </div>
     </div>

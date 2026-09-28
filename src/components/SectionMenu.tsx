@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { SECTION_LABELS, type Section } from "../types";
 
-const SECTIONS: Section[] = ["dashboard", "thisMonth", "categories", "settings"];
+const SECTIONS: Section[] = ["dashboard", "thisMonth", "reports", "goals", "categories", "settings"];
 
 export function SectionMenu({
   section,

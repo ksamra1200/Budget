@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import type { Category, CategoryMode } from "../types";
+import type { MonthBudget } from "../rollover";
 import { formatCurrency } from "../utils";
 
 // Part-to-whole reads at a glance only up to ~6 segments; the rest fold into "Other".
@@ -34,13 +35,18 @@ function arcPath(start: number, end: number): string {
   return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
 }
 
-function buildSegments(categories: Category[], spentByCategory: Map<string, number>): Segment[] {
-  const withBudget = categories.filter((c) => c.budget > 0);
+function buildSegments(
+  categories: Category[],
+  spentByCategory: Map<string, number>,
+  budgets: Map<string, MonthBudget>,
+): Segment[] {
+  const budgetOf = (c: Category) => budgets.get(c.id)?.budget ?? c.budget;
+  const withBudget = categories.filter((c) => budgetOf(c) > 0);
   const toSegment = (c: Category, i: number): Segment => ({
     key: c.id,
     name: c.name || "Untitled",
     color: `var(--cat-${i + 1})`,
-    budget: c.budget,
+    budget: budgetOf(c),
     spent: spentByCategory.get(c.id) ?? 0,
     mode: c.mode,
   });
@@ -52,7 +58,7 @@ function buildSegments(categories: Category[], spentByCategory: Map<string, numb
     key: "__other",
     name: `Other (${rest.length})`,
     color: "var(--cat-other)",
-    budget: rest.reduce((sum, c) => sum + c.budget, 0),
+    budget: rest.reduce((sum, c) => sum + budgetOf(c), 0),
     spent: rest.reduce((sum, c) => sum + (spentByCategory.get(c.id) ?? 0), 0),
     mode: "fill",
   });
@@ -71,9 +77,11 @@ function WarningIcon() {
 export function BudgetDonut({
   categories,
   spentByCategory,
+  budgets,
 }: {
   categories: Category[];
   spentByCategory: Map<string, number>;
+  budgets: Map<string, MonthBudget>;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const lastPointer = useRef<string>("mouse");
@@ -82,7 +90,7 @@ export function BudgetDonut({
     return <p className="empty-state">Add a category from the Categories page to see your budget here.</p>;
   }
 
-  const segments = buildSegments(categories, spentByCategory);
+  const segments = buildSegments(categories, spentByCategory, budgets);
   if (segments.length === 0) {
     return <p className="empty-state">Give your categories a budget amount to see them here.</p>;
   }

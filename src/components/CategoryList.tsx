@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Category, CategoryMode } from "../types";
-import { formatCurrency } from "../utils";
+import { currentMonthKey, formatCurrency } from "../utils";
 
 export function CategoryList({
   categories,
@@ -66,12 +66,28 @@ export function CategoryList({
                 aria-label={`Monthly budget for ${c.name}`}
               />
             </div>
+            <label className="checkbox-row category-rollover">
+              <input
+                type="checkbox"
+                checked={!!c.rollover}
+                onChange={(e) =>
+                  onUpdate(
+                    c.id,
+                    e.target.checked
+                      ? { rollover: true, rolloverFrom: currentMonthKey() }
+                      : { rollover: false, rolloverFrom: undefined },
+                  )
+                }
+              />
+              <span>Roll unused money into next month</span>
+            </label>
           </div>
         ) : (
           <div className="category-view-row" key={c.id}>
             <span className="category-view-name">
               {c.name || "Untitled"}
               {c.mode === "deplete" && <span className="category-mode-badge">Descending</span>}
+              {c.rollover && <span className="category-mode-badge">Rolls over</span>}
             </span>
             <span className="category-view-budget">{formatCurrency(c.budget)}</span>
           </div>

@@ -6,17 +6,19 @@ export function TransactionList({
   categories,
   onEdit,
   onRemove,
+  emptyMessage = "No transactions yet this month.",
 }: {
   transactions: Transaction[];
   categories: Category[];
   onEdit: (tx: Transaction) => void;
   onRemove: (id: string) => void;
+  emptyMessage?: string;
 }) {
   const categoryName = (id: string | null) =>
     categories.find((c) => c.id === id)?.name ?? "Uncategorized";
 
   if (transactions.length === 0) {
-    return <p className="empty-state">No transactions yet this month.</p>;
+    return <p className="empty-state">{emptyMessage}</p>;
   }
 
   const sorted = [...transactions].sort((a, b) => b.date.localeCompare(a.date));

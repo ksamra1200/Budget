@@ -1,8 +1,231 @@
 rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Document: users/{userId}/budget/data  (one per user, their whole budget)
+// Fields:
+//   - categories:   list (optional, <= 200 items)   - budget categories
+//   - transactions: list (optional, <= 20000 items) - income/expense entries
+//   - recurring:    list (optional, <= 500 items)   - monthly repeat rules
+//   - rules:        list (optional, <= 500 items)   - auto-categorize rules
+//   - goals:        list (optional, <= 200 items)   - savings goals
+//   - members:      list<string uid> (optional, <= 5) - people it's shared with
+//   - memberNames:  map uid -> string (optional, <= 5 keys, values <= 100 chars)
+//   - ownerName:    string (optional, <= 100 chars, owner-written)
+//   - joinCode:     string (optional, 8 chars) - last invite code used to join
+// The owner (userId) reads and writes everything, but can only shrink
+// `members` (remove people), never add to it. Members can read the document,
+// edit the five budget-content lists, and remove themselves. A non-member can
+// add only themselves, and only with a valid, unexpired invite for this owner.
+//
+// Document: users/{userId}/profile/sharing
+// Fields:
+//   - budgetOwner: string uid (required, <= 128 chars) - whose budget to open
+// Owner-only. Pointing at someone else's budget grants nothing by itself:
+// reading that budget still requires being in its `members`.
+//
+// Document: invites/{code}   (code: 8 chars, single use, expires)
+// Fields:
+//   - ownerUid:  string (required, == creator's uid, immutable)
+//   - createdAt: timestamp (required, == request.time on create)
+//   - expiresAt: timestamp (required, in the future, <= 7 days ahead)
+// Readable by id to any signed-in user (knowing the code is the secret);
+// never listable. Deletable by its owner, or by whoever just joined with it.
+//
+// Everything else is denied.
+// ===============================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    // =============================================================
+    // Helper Functions
+    // =============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function oldMembers() {
+      return resource.data.get('members', []);
+    }
+
+    function newMembers() {
+      return request.resource.data.get('members', []);
+    }
+
+    function oldMemberNames() {
+      return resource.data.get('memberNames', {});
+    }
+
+    function newMemberNames() {
+      return request.resource.data.get('memberNames', {});
+    }
+
+    function isMember() {
+      return isAuthenticated() && request.auth.uid in oldMembers();
+    }
+
+    function optionalList(data, field, maxSize) {
+      return !(field in data) || (data[field] is list && data[field].size() <= maxSize);
+    }
+
+    function optionalString(data, field, maxLen) {
+      return !(field in data) || (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    // Every uid in members must be a short string (uids are 28 chars).
+    // Rules have no loops, so check each of the (at most 5) slots.
+    function uidAt(list, i) {
+      return list.size() <= i || (list[i] is string && list[i].size() > 0 && list[i].size() <= 128);
+    }
+
+    function validMembers(list) {
+      return list is list && list.size() <= 5 &&
+        uidAt(list, 0) && uidAt(list, 1) && uidAt(list, 2) && uidAt(list, 3) && uidAt(list, 4);
+    }
+
+    // =============================================================
+    // Domain Validators
+    // =============================================================
+
+    // Shape of the whole budget document after any create or update.
+    // Note: rules can't loop over list items, so the contents of the budget
+    // lists aren't validated item by item; the list sizes are capped and the
+    // 1 MiB document limit bounds the rest.
+    function isValidBudget(data) {
+      return data.keys().hasOnly([
+          'categories', 'transactions', 'recurring', 'rules', 'goals',
+          'members', 'memberNames', 'ownerName', 'joinCode'
+        ]) &&
+        optionalList(data, 'categories', 200) &&
+        optionalList(data, 'transactions', 20000) &&
+        optionalList(data, 'recurring', 500) &&
+        optionalList(data, 'rules', 500) &&
+        optionalList(data, 'goals', 200) &&
+        (!('members' in data) || validMembers(data.members)) &&
+        (!('memberNames' in data) || (data.memberNames is map && data.memberNames.size() <= 5)) &&
+        optionalString(data, 'ownerName', 100) &&
+        optionalString(data, 'joinCode', 8);
+    }
+
+    // Owner edits: anything, except members/memberNames may only shrink and
+    // joinCode may not be changed, so the owner can't pull someone into
+    // their budget without that person using an invite.
+    function isValidOwnerUpdate() {
+      return oldMembers().hasAll(newMembers()) &&
+        oldMemberNames().keys().hasAll(newMemberNames().keys()) &&
+        request.resource.data.get('joinCode', null) == resource.data.get('joinCode', null);
+    }
+
+    // A member editing the shared budget's content, nothing else.
+    function isValidMemberEdit() {
+      return isMember() &&
+        changedKeys().hasOnly(['categories', 'transactions', 'recurring', 'rules', 'goals']);
+    }
+
+    // A member removing themselves (and only themselves).
+    function isValidLeave() {
+      return isMember() &&
+        changedKeys().hasOnly(['members', 'memberNames']) &&
+        !(request.auth.uid in newMembers()) &&
+        oldMembers().hasAll(newMembers()) &&
+        newMembers().size() == oldMembers().size() - 1 &&
+        newMemberNames().diff(oldMemberNames()).affectedKeys().hasOnly([request.auth.uid]) &&
+        !(request.auth.uid in newMemberNames());
+    }
+
+    function inviteFor(code) {
+      return get(/databases/$(database)/documents/invites/$(code));
+    }
+
+    // A non-member adding only themselves, using a live invite for this owner.
+    function isValidJoin(ownerId) {
+      let code = request.resource.data.get('joinCode', '');
+      return isAuthenticated() &&
+        request.auth.uid != ownerId &&
+        !(request.auth.uid in oldMembers()) &&
+        changedKeys().hasOnly(['members', 'memberNames', 'joinCode']) &&
+        newMembers().hasAll(oldMembers()) &&
+        newMembers().size() == oldMembers().size() + 1 &&
+        request.auth.uid in newMembers() &&
+        newMemberNames().diff(oldMemberNames()).affectedKeys().hasOnly([request.auth.uid]) &&
+        newMemberNames()[request.auth.uid] is string &&
+        newMemberNames()[request.auth.uid].size() > 0 &&
+        newMemberNames()[request.auth.uid].size() <= 100 &&
+        code is string && code.size() == 8 &&
+        exists(/databases/$(database)/documents/invites/$(code)) &&
+        inviteFor(code).data.ownerUid == ownerId &&
+        request.time < inviteFor(code).data.expiresAt;
+    }
+
+    function isValidSharingPointer(data) {
+      return data.keys().hasOnly(['budgetOwner']) &&
+        data.budgetOwner is string &&
+        data.budgetOwner.size() > 0 &&
+        data.budgetOwner.size() <= 128;
+    }
+
+    function isValidInvite(code, data) {
+      return code.size() == 8 &&
+        data.keys().hasOnly(['ownerUid', 'createdAt', 'expiresAt']) &&
+        data.keys().hasAll(['ownerUid', 'createdAt', 'expiresAt']) &&
+        data.ownerUid == request.auth.uid &&
+        data.createdAt == request.time &&
+        data.expiresAt is timestamp &&
+        data.expiresAt > request.time &&
+        data.expiresAt <= request.time + duration.value(7, 'd');
+    }
+
+    // =============================================================
+    // Rules
+    // =============================================================
+
+    match /users/{userId}/budget/data {
+      allow read: if isOwner(userId) || isMember();
+
+      // The owner seeds their own document on first sign-in. Nobody starts
+      // out as a member, so a new document can't list any.
+      allow create: if isOwner(userId) &&
+        isValidBudget(request.resource.data) &&
+        newMembers().size() == 0 &&
+        newMemberNames().size() == 0 &&
+        !('joinCode' in request.resource.data);
+
+      allow update: if isValidBudget(request.resource.data) && (
+        (isOwner(userId) && isValidOwnerUpdate()) ||
+        isValidMemberEdit() ||
+        isValidLeave() ||
+        isValidJoin(userId)
+      );
+
+      allow delete: if false;
+    }
+
+    match /users/{userId}/profile/sharing {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isValidSharingPointer(request.resource.data);
+    }
+
+    match /invites/{code} {
+      allow get: if isAuthenticated();
+      allow list: if false;
+      allow create: if isAuthenticated() && isValidInvite(code, request.resource.data);
+      allow update: if false;
+      allow delete: if isAuthenticated() && (
+        resource.data.ownerUid == request.auth.uid ||
+        request.auth.uid in get(/databases/$(database)/documents/users/$(resource.data.ownerUid)/budget/data).data.get('members', [])
+      );
     }
   }
 }

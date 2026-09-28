@@ -2,6 +2,9 @@ import { StatTile } from "../components/StatTile";
 import { CategoryMeter } from "../components/CategoryMeter";
 import { MonthNav } from "../components/MonthNav";
 import { BudgetDonut } from "../components/BudgetDonut";
+import { AlertsCard } from "../components/AlertsCard";
+import type { Alert } from "../alerts";
+import type { MonthBudget } from "../rollover";
 import type { Category } from "../types";
 
 export function Dashboard({
@@ -10,18 +13,24 @@ export function Dashboard({
   totals,
   categories,
   spentByCategory,
+  budgets,
+  alerts,
 }: {
   monthKey: string;
   onMonthChange: (next: string) => void;
   totals: { income: number; expenses: number; remaining: number };
   categories: Category[];
   spentByCategory: Map<string, number>;
+  budgets: Map<string, MonthBudget>;
+  alerts: Alert[];
 }) {
   return (
     <>
       <div className="month-nav-row">
         <MonthNav monthKey={monthKey} onChange={onMonthChange} />
       </div>
+
+      <AlertsCard alerts={alerts} />
 
       <div className="stat-row">
         <StatTile label="Income" value={totals.income} />
@@ -35,7 +44,7 @@ export function Dashboard({
 
       <section className="card">
         <h2>Budget breakdown</h2>
-        <BudgetDonut categories={categories} spentByCategory={spentByCategory} />
+        <BudgetDonut categories={categories} spentByCategory={spentByCategory} budgets={budgets} />
       </section>
 
       <section className="card">
@@ -48,7 +57,8 @@ export function Dashboard({
               key={c.id}
               name={c.name}
               spent={spentByCategory.get(c.id) ?? 0}
-              budget={c.budget}
+              budget={budgets.get(c.id)?.budget ?? c.budget}
+              carried={budgets.get(c.id)?.carried ?? 0}
               mode={c.mode}
             />
           ))

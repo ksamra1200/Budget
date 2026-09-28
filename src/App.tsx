@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import { useCloudBudgetData } from "./cloudStorage";
-import { currentMonthKey, downloadCsv, monthKeyOf, todayISO } from "./utils";
+import { clearSharingPointer, useBudgetOwner } from "./sharing";
+import { budgetsForMonth } from "./rollover";
+import { budgetAlerts, NEAR_LIMIT_PCT, upcomingBills } from "./alerts";
+import { usePrefs } from "./usePrefs";
+import { currentMonthKey, downloadCsv, formatCurrency, monthKeyOf, todayISO } from "./utils";
 import { generateDueTransactions } from "./recurring";
 import { useTheme } from "./useTheme";
 import { Dashboard } from "./sections/Dashboard";
 import { ThisMonth } from "./sections/ThisMonth";
 import { Categories } from "./sections/Categories";
+import { Reports } from "./sections/Reports";
+import { Goals } from "./sections/Goals";
 import { Settings } from "./components/Settings";
 import { SectionMenu } from "./components/SectionMenu";
 import { Sheet } from "./components/Sheet";
@@ -17,6 +23,7 @@ import {
   type Category,
   type CategoryMode,
   type RecurringRule,
+  type SavingsGoal,
   type Section,
   type Transaction,
   type TransactionInput,
@@ -25,7 +32,12 @@ import {
 const UNDO_MS = 5000;
 
 export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => void }) {
-  const { data, loading, update } = useCloudBudgetData(user.uid);
+  const ownerUid = useBudgetOwner(user.uid);
+  const { data, loading, update, sharing } = useCloudBudgetData(ownerUid, user.uid, () => {
+    clearSharingPointer(user.uid);
+    showNotice("You're no longer in the shared budget.");
+  });
+  const { prefs, setPref } = usePrefs();
   const [monthKey, setMonthKey] = useState(currentMonthKey());
   const [section, setSection] = useState<Section>("dashboard");
   const { theme, toggleTheme } = useTheme();
@@ -34,7 +46,7 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [sheetKey, setSheetKey] = useState(0);
 
-  const [toast, setToast] = useState<{ message: string; undo: () => void } | null>(null);
+  const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
 
   // An installed PWA can stay open in the background for days, so refresh
@@ -82,14 +94,53 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
     return map;
   }, [monthTransactions]);
 
+  const budgets = useMemo(
+    () => budgetsForMonth(data.categories, data.transactions, monthKey),
+    [data.categories, data.transactions, monthKey],
+  );
+
+  const alerts = useMemo(() => {
+    // Reminders are about now, so only show them on the current month.
+    if (monthKey !== monthKeyOf(today)) return [];
+    return [
+      ...(prefs.budgetAlerts ? budgetAlerts(data.categories, spentByCategory, budgets) : []),
+      ...(prefs.billReminders ? upcomingBills(data.recurring, data.categories, today) : []),
+    ];
+  }, [monthKey, today, prefs, data.categories, data.recurring, spentByCategory, budgets]);
+
   function showUndo(message: string, undo: () => void) {
     window.clearTimeout(toastTimer.current);
     setToast({ message, undo });
     toastTimer.current = window.setTimeout(() => setToast(null), UNDO_MS);
   }
 
+  function showNotice(message: string) {
+    window.clearTimeout(toastTimer.current);
+    setToast({ message });
+    toastTimer.current = window.setTimeout(() => setToast(null), UNDO_MS);
+  }
+
+  /** Warn right away when a new expense pushes its category to 90% or over. */
+  function checkBudgetAfterAdding(tx: TransactionInput) {
+    if (!prefs.budgetAlerts || tx.type !== "expense" || !tx.categoryId) return;
+    const category = data.categories.find((c) => c.id === tx.categoryId);
+    if (!category) return;
+    const month = monthKeyOf(tx.date);
+    const budget = budgetsForMonth(data.categories, data.transactions, month).get(category.id)?.budget ?? 0;
+    const before = data.transactions
+      .filter((t) => t.type === "expense" && t.categoryId === category.id && monthKeyOf(t.date) === month)
+      .reduce((sum, t) => sum + t.amount, 0);
+    const after = before + tx.amount;
+    const name = category.name || "This category";
+    if (after > budget && before <= budget) {
+      showNotice(`${name} is now ${formatCurrency(after - budget)} over budget`);
+    } else if (budget > 0 && after <= budget && (after / budget) * 100 >= NEAR_LIMIT_PCT && (before / budget) * 100 < NEAR_LIMIT_PCT) {
+      showNotice(`${name} is at ${Math.round((after / budget) * 100)}% of its budget`);
+    }
+  }
+
   function handleUndo() {
-    toast?.undo();
+    toast?.undo?.();
     window.clearTimeout(toastTimer.current);
     setToast(null);
   }
@@ -179,6 +230,40 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
     );
   }
 
+  function addRule(match: string, categoryId: string) {
+    update((prev) => ({ ...prev, rules: [...prev.rules, { id: crypto.randomUUID(), match, categoryId }] }));
+  }
+
+  function removeRule(id: string) {
+    update((prev) => ({ ...prev, rules: prev.rules.filter((r) => r.id !== id) }));
+  }
+
+  function addGoal(goal: Omit<SavingsGoal, "id">) {
+    update((prev) => ({ ...prev, goals: [...prev.goals, { id: crypto.randomUUID(), ...goal }] }));
+  }
+
+  function contributeToGoal(id: string, delta: number) {
+    update((prev) => ({
+      ...prev,
+      goals: prev.goals.map((g) => (g.id === id ? { ...g, saved: Math.max(0, g.saved + delta) } : g)),
+    }));
+  }
+
+  function removeGoal(id: string) {
+    const index = data.goals.findIndex((g) => g.id === id);
+    if (index < 0) return;
+    const removed = data.goals[index];
+    update((prev) => ({ ...prev, goals: prev.goals.filter((g) => g.id !== id) }));
+    showUndo(`"${removed.name}" deleted`, () =>
+      update((prev) => {
+        if (prev.goals.some((g) => g.id === id)) return prev;
+        const goals = [...prev.goals];
+        goals.splice(Math.min(index, goals.length), 0, removed);
+        return { ...prev, goals };
+      }),
+    );
+  }
+
   function exportCsv() {
     const categoryName = (id: string | null) =>
       data.categories.find((c) => c.id === id)?.name ?? "";
@@ -211,7 +296,7 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
 
   const closeSheet = useCallback(() => setSheetOpen(false), []);
 
-  if (loading) {
+  if (loading || !ownerUid) {
     return <p className="empty-state" style={{ textAlign: "center", padding: 40 }}>Loading your budget…</p>;
   }
 
@@ -229,6 +314,8 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
           totals={totals}
           categories={data.categories}
           spentByCategory={spentByCategory}
+          budgets={budgets}
+          alerts={alerts}
         />
       )}
 
@@ -237,6 +324,7 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
           monthKey={monthKey}
           onMonthChange={setMonthKey}
           transactions={monthTransactions}
+          allTransactions={data.transactions}
           categories={data.categories}
           recurring={data.recurring}
           onEditTransaction={openEditSheet}
@@ -246,17 +334,42 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
         />
       )}
 
+      {section === "reports" && (
+        <Reports
+          monthKey={monthKey}
+          onMonthChange={setMonthKey}
+          transactions={data.transactions}
+          categories={data.categories}
+        />
+      )}
+
+      {section === "goals" && (
+        <Goals goals={data.goals} onAdd={addGoal} onContribute={contributeToGoal} onRemove={removeGoal} />
+      )}
+
       {section === "categories" && (
         <Categories
           categories={data.categories}
+          rules={data.rules}
           onUpdate={updateCategory}
           onRemove={removeCategory}
           onAddCategory={addCategory}
+          onAddRule={addRule}
+          onRemoveRule={removeRule}
         />
       )}
 
       {section === "settings" && (
-        <Settings user={user} theme={theme} onToggleTheme={toggleTheme} onSignOut={onSignOut} />
+        <Settings
+          user={user}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onSignOut={onSignOut}
+          prefs={prefs}
+          onSetPref={setPref}
+          ownerUid={ownerUid}
+          sharing={sharing}
+        />
       )}
 
       <button type="button" className="fab" aria-label="Add a transaction" onClick={openAddSheet}>
@@ -270,18 +383,22 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
         <TransactionForm
           key={sheetKey}
           categories={data.categories}
+          rules={data.rules}
           initial={editing ?? undefined}
           allowRepeat={!editing}
           submitLabel={editing ? "Save" : "Add"}
           onSubmit={(tx, repeat) => {
             if (editing) editTransaction(editing.id, tx);
-            else addTransaction(tx, repeat);
+            else {
+              addTransaction(tx, repeat);
+              checkBudgetAfterAdding(tx);
+            }
             closeSheet();
           }}
         />
       </Sheet>
 
-      {toast && <UndoToast message={toast.message} onUndo={handleUndo} />}
+      {toast && <UndoToast message={toast.message} onUndo={toast.undo ? handleUndo : undefined} />}
     </>
   );
 }

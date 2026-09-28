@@ -1,7 +1,7 @@
 import type { BudgetData, RecurringRule, Transaction } from "./types";
 import { shiftMonth } from "./utils";
 
-function dateInMonth(monthKey: string, day: number): string {
+export function dateInMonth(monthKey: string, day: number): string {
   const [year, month] = monthKey.split("-").map(Number);
   const lastDay = new Date(year, month, 0).getDate();
   return `${monthKey}-${String(Math.min(day, lastDay)).padStart(2, "0")}`;
@@ -40,4 +40,9 @@ export function generateDueTransactions(data: BudgetData, today: string): Budget
 
   if (!changed) return data;
   return { ...data, recurring, transactions: [...data.transactions, ...created] };
+}
+
+/** The date a rule will next create a transaction on (always after its last one). */
+export function nextOccurrence(rule: RecurringRule): string {
+  return dateInMonth(shiftMonth(rule.lastGeneratedMonth, 1), rule.dayOfMonth);
 }

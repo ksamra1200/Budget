@@ -7,6 +7,10 @@ import {
   type User,
 } from "firebase/auth";
 import { ThemeToggle } from "./ThemeToggle";
+import { Switch } from "./Switch";
+import { SharingCard } from "./SharingCard";
+import type { SharingInfo } from "../cloudStorage";
+import type { Prefs } from "../usePrefs";
 
 function friendlyError(err: unknown): string {
   const code = (err as { code?: string })?.code ?? "";
@@ -28,11 +32,19 @@ export function Settings({
   theme,
   onToggleTheme,
   onSignOut,
+  prefs,
+  onSetPref,
+  ownerUid,
+  sharing,
 }: {
   user: User;
   theme: "light" | "dark";
   onToggleTheme: () => void;
   onSignOut: () => void;
+  prefs: Prefs;
+  onSetPref: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void;
+  ownerUid: string;
+  sharing: SharingInfo;
 }) {
   const [name, setName] = useState(user.displayName ?? "");
   const [nameStatus, setNameStatus] = useState<string | null>(null);
@@ -99,6 +111,34 @@ export function Settings({
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         </div>
       </section>
+
+      <section className="card">
+        <h2>Alerts</h2>
+        <div className="settings-row">
+          <span>
+            Bill reminders
+            <span className="settings-sub">Recurring expenses due in the next 7 days</span>
+          </span>
+          <Switch
+            label="Bill reminders"
+            checked={prefs.billReminders}
+            onChange={(v) => onSetPref("billReminders", v)}
+          />
+        </div>
+        <div className="settings-row">
+          <span>
+            Budget alerts
+            <span className="settings-sub">When a category hits 90% or goes over</span>
+          </span>
+          <Switch
+            label="Budget alerts"
+            checked={prefs.budgetAlerts}
+            onChange={(v) => onSetPref("budgetAlerts", v)}
+          />
+        </div>
+      </section>
+
+      <SharingCard user={user} ownerUid={ownerUid} sharing={sharing} />
 
       <section className="card">
         <h2>Profile</h2>

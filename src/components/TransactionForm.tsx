@@ -1,15 +1,17 @@
 import { useState } from "react";
-import type { Category, TransactionInput, TransactionType } from "../types";
+import type { Category, CategoryRule, TransactionInput, TransactionType } from "../types";
 import { ordinal, todayISO } from "../utils";
 
 export function TransactionForm({
   categories,
+  rules,
   initial,
   allowRepeat,
   submitLabel,
   onSubmit,
 }: {
   categories: Category[];
+  rules: CategoryRule[];
   initial?: TransactionInput;
   allowRepeat: boolean;
   submitLabel: string;
@@ -24,6 +26,26 @@ export function TransactionForm({
   const [note, setNote] = useState(initial?.note ?? "");
   const [repeat, setRepeat] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Once the category is picked by hand (or we're editing), rules stop overriding it.
+  const [categoryTouched, setCategoryTouched] = useState(!!initial);
+  const [ruleHit, setRuleHit] = useState<string | null>(null);
+
+  function handleNoteChange(value: string) {
+    setNote(value);
+    if (categoryTouched) return;
+    const text = value.toLowerCase();
+    const rule = text
+      ? rules.find(
+          (r) => r.match && text.includes(r.match.toLowerCase()) && categories.some((c) => c.id === r.categoryId),
+        )
+      : undefined;
+    if (rule) {
+      setCategoryId(rule.categoryId);
+      setRuleHit(rule.match);
+    } else if (ruleHit) {
+      setRuleHit(null);
+    }
+  }
 
   const day = Number(date.slice(8, 10));
 
@@ -68,7 +90,15 @@ export function TransactionForm({
       {type === "expense" && (
         <div className="field" style={{ flex: "1 1 140px" }}>
           <label htmlFor="tx-category">Category</label>
-          <select id="tx-category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+          <select
+            id="tx-category"
+            value={categoryId}
+            onChange={(e) => {
+              setCategoryId(e.target.value);
+              setCategoryTouched(true);
+              setRuleHit(null);
+            }}
+          >
             {categories.length === 0 && <option value="">No categories yet</option>}
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
@@ -76,6 +106,7 @@ export function TransactionForm({
               </option>
             ))}
           </select>
+          {ruleHit && <span className="field-hint">Picked by your "{ruleHit}" rule</span>}
         </div>
       )}
 
@@ -107,7 +138,7 @@ export function TransactionForm({
           type="text"
           placeholder="Optional"
           value={note}
-          onChange={(e) => setNote(e.target.value)}
+          onChange={(e) => handleNoteChange(e.target.value)}
         />
       </div>
 
