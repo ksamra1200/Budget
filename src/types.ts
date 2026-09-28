@@ -11,8 +11,7 @@ export interface Category {
 
 export type TransactionType = "income" | "expense";
 
-export interface Transaction {
-  id: string;
+export interface TransactionInput {
   date: string; // YYYY-MM-DD
   type: TransactionType;
   amount: number; // always positive
@@ -20,9 +19,28 @@ export interface Transaction {
   note: string;
 }
 
+export interface Transaction extends TransactionInput {
+  id: string;
+  /** Set when this transaction was created by (or started) a recurring rule. */
+  recurringId?: string;
+}
+
+export interface RecurringRule {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  categoryId: string | null;
+  note: string;
+  /** Day of the month it repeats on; clamped to the month's length (e.g. 31 -> 30). */
+  dayOfMonth: number;
+  /** Most recent month (YYYY-MM) a transaction was created for. */
+  lastGeneratedMonth: string;
+}
+
 export interface BudgetData {
   categories: Category[];
   transactions: Transaction[];
+  recurring: RecurringRule[];
 }
 
 export type Section = "dashboard" | "thisMonth" | "categories" | "settings";

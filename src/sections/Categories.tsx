@@ -4,18 +4,18 @@ import type { Category, CategoryMode } from "../types";
 
 export function Categories({
   categories,
-  onUpdateBudget,
+  onUpdate,
   onRemove,
   onAddCategory,
 }: {
   categories: Category[];
-  onUpdateBudget: (id: string, budget: number) => void;
+  onUpdate: (id: string, patch: Partial<Omit<Category, "id">>) => void;
   onRemove: (id: string) => void;
   onAddCategory: (name: string, budget: number, mode: CategoryMode) => void;
 }) {
   return (
     <>
-      <CategoryList categories={categories} onUpdateBudget={onUpdateBudget} onRemove={onRemove} />
+      <CategoryList categories={categories} onUpdate={onUpdate} onRemove={onRemove} />
       <AddCategoryForm onAdd={onAddCategory} />
     </>
   );

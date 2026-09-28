@@ -5,7 +5,7 @@ import type { BudgetData, Category } from "./types";
 
 const LOCAL_STORAGE_KEY = "budget-app-data";
 
-const EMPTY_DATA: BudgetData = { categories: [], transactions: [] };
+const EMPTY_DATA: BudgetData = { categories: [], transactions: [], recurring: [] };
 
 function normalize(raw: unknown): BudgetData {
   const r = (raw ?? {}) as Partial<BudgetData>;
@@ -15,6 +15,7 @@ function normalize(raw: unknown): BudgetData {
       (c): Category => ({ ...c, mode: c.mode === "deplete" ? "deplete" : "fill" }),
     ),
     transactions: Array.isArray(r.transactions) ? r.transactions : [],
+    recurring: Array.isArray(r.recurring) ? r.recurring : [],
   };
 }
 
@@ -42,10 +43,13 @@ export function useCloudBudgetData(uid: string) {
     const ref = doc(db, "users", uid, "budget", "data");
 
     const unsubscribe = onSnapshot(ref, (snap) => {
-      skipNextWrite.current = true;
       if (snap.exists()) {
+        skipNextWrite.current = true;
         setData(normalize(snap.data()));
-      } else {
+      } else if (!snap.metadata.fromCache) {
+        // Only seed once the server confirms there's no document. A cache miss
+        // while offline would otherwise overwrite real data with an empty one.
+        skipNextWrite.current = true;
         const seed = loadLocalFallback();
         setData(seed);
         setDoc(ref, seed).catch(() => {});

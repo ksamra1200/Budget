@@ -1,25 +1,32 @@
 import { MonthNav } from "../components/MonthNav";
 import { TransactionList } from "../components/TransactionList";
-import type { Category, Transaction } from "../types";
+import { RecurringList } from "../components/RecurringList";
+import type { Category, RecurringRule, Transaction } from "../types";
 
 export function ThisMonth({
   monthKey,
   onMonthChange,
   transactions,
   categories,
+  recurring,
+  onEditTransaction,
   onRemoveTransaction,
+  onStopRecurring,
   onExportCsv,
 }: {
   monthKey: string;
   onMonthChange: (next: string) => void;
   transactions: Transaction[];
   categories: Category[];
+  recurring: RecurringRule[];
+  onEditTransaction: (tx: Transaction) => void;
   onRemoveTransaction: (id: string) => void;
+  onStopRecurring: (id: string) => void;
   onExportCsv: () => void;
 }) {
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "center", padding: "4px 0 16px" }}>
+      <div className="month-nav-row">
         <MonthNav monthKey={monthKey} onChange={onMonthChange} />
       </div>
 
@@ -30,8 +37,15 @@ export function ThisMonth({
             Export CSV
           </button>
         </div>
-        <TransactionList transactions={transactions} categories={categories} onRemove={onRemoveTransaction} />
+        <TransactionList
+          transactions={transactions}
+          categories={categories}
+          onEdit={onEditTransaction}
+          onRemove={onRemoveTransaction}
+        />
       </section>
+
+      <RecurringList rules={recurring} categories={categories} onStop={onStopRecurring} />
     </>
   );
 }

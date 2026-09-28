@@ -1,53 +1,65 @@
 import { useState } from "react";
-import type { Category, TransactionType } from "../types";
-import { todayISO } from "../utils";
+import type { Category, TransactionInput, TransactionType } from "../types";
+import { ordinal, todayISO } from "../utils";
 
 export function TransactionForm({
   categories,
-  onAdd,
+  initial,
+  allowRepeat,
+  submitLabel,
+  onSubmit,
 }: {
   categories: Category[];
-  onAdd: (tx: {
-    date: string;
-    type: TransactionType;
-    amount: number;
-    categoryId: string | null;
-    note: string;
-  }) => void;
+  initial?: TransactionInput;
+  allowRepeat: boolean;
+  submitLabel: string;
+  onSubmit: (tx: TransactionInput, repeat: boolean) => void;
 }) {
-  const [date, setDate] = useState(todayISO());
-  const [type, setType] = useState<TransactionType>("expense");
-  const [categoryId, setCategoryId] = useState<string>(categories[0]?.id ?? "");
-  const [amount, setAmount] = useState("");
-  const [note, setNote] = useState("");
+  const [date, setDate] = useState(initial?.date ?? todayISO());
+  const [type, setType] = useState<TransactionType>(initial?.type ?? "expense");
+  const [categoryId, setCategoryId] = useState<string>(
+    initial?.categoryId ?? categories[0]?.id ?? "",
+  );
+  const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
+  const [note, setNote] = useState(initial?.note ?? "");
+  const [repeat, setRepeat] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const day = Number(date.slice(8, 10));
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const parsedAmount = Number(amount);
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return;
-    if (type === "expense" && !categoryId) return;
-
-    onAdd({
-      date,
-      type,
-      amount: parsedAmount,
-      categoryId: type === "income" ? null : categoryId,
-      note: note.trim(),
-    });
-
-    setAmount("");
-    setNote("");
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setError("Enter an amount greater than zero.");
+      return;
+    }
+    if (!date) {
+      setError("Pick a date.");
+      return;
+    }
+    if (type === "expense" && !categoryId) {
+      setError("Add a category on the Categories page first.");
+      return;
+    }
+    setError(null);
+    onSubmit(
+      {
+        date,
+        type,
+        amount: parsedAmount,
+        categoryId: type === "income" ? null : categoryId,
+        note: note.trim(),
+      },
+      allowRepeat && repeat,
+    );
   }
 
   return (
     <form className="inline-form" onSubmit={handleSubmit}>
       <div className="field" style={{ flex: "1 1 100px" }}>
         <label htmlFor="tx-type">Type</label>
-        <select
-          id="tx-type"
-          value={type}
-          onChange={(e) => setType(e.target.value as TransactionType)}
-        >
+        <select id="tx-type" value={type} onChange={(e) => setType(e.target.value as TransactionType)}>
           <option value="expense">Expense</option>
           <option value="income">Income</option>
         </select>
@@ -57,6 +69,7 @@ export function TransactionForm({
         <div className="field" style={{ flex: "1 1 140px" }}>
           <label htmlFor="tx-category">Category</label>
           <select id="tx-category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            {categories.length === 0 && <option value="">No categories yet</option>}
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -74,6 +87,7 @@ export function TransactionForm({
             type="number"
             min="0"
             step="0.01"
+            inputMode="decimal"
             placeholder="0.00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
@@ -97,8 +111,19 @@ export function TransactionForm({
         />
       </div>
 
+      {allowRepeat && (
+        <label className="checkbox-row">
+          <input type="checkbox" checked={repeat} onChange={(e) => setRepeat(e.target.checked)} />
+          <span>
+            Repeat every month{day > 0 ? ` on the ${ordinal(day)}` : ""}
+          </span>
+        </label>
+      )}
+
+      {error && <p className="auth-error form-error">{error}</p>}
+
       <button type="submit" className="primary">
-        Add
+        {submitLabel}
       </button>
     </form>
   );

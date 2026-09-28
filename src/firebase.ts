@@ -1,6 +1,10 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { initializeFirestore } from "firebase/firestore";
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 
 // Firebase's web config values are not secret - they identify the project,
 // but access is controlled entirely by Firestore security rules.
@@ -20,6 +24,10 @@ export const auth = getAuth(app);
 // Some networks (restrictive proxies, certain corporate/VPN setups) block or
 // break Firestore's default streaming connection. Auto-detecting long-polling
 // makes sync resilient to that without affecting normal connections.
+// persistentLocalCache keeps data and queued writes in IndexedDB, so entries
+// made offline survive the app being closed and sync once back online.
 export const db = initializeFirestore(app, {
   experimentalAutoDetectLongPolling: true,
+  ignoreUndefinedProperties: true,
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 });

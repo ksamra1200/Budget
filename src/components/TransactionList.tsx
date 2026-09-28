@@ -4,10 +4,12 @@ import { formatCurrency } from "../utils";
 export function TransactionList({
   transactions,
   categories,
+  onEdit,
   onRemove,
 }: {
   transactions: Transaction[];
   categories: Category[];
+  onEdit: (tx: Transaction) => void;
   onRemove: (id: string) => void;
 }) {
   const categoryName = (id: string | null) =>
@@ -23,16 +25,19 @@ export function TransactionList({
     <ul className="tx-list">
       {sorted.map((tx) => (
         <li className="tx-row" key={tx.id}>
-          <div className="tx-main">
-            <span className="tx-note">{tx.note || categoryName(tx.categoryId)}</span>
-            <span className="tx-meta">
-              {tx.date} · {tx.type === "income" ? "Income" : categoryName(tx.categoryId)}
+          <button type="button" className="tx-edit" onClick={() => onEdit(tx)} aria-label={`Edit ${tx.note || categoryName(tx.categoryId)}`}>
+            <span className="tx-main">
+              <span className="tx-note">{tx.note || categoryName(tx.categoryId)}</span>
+              <span className="tx-meta">
+                {tx.date} · {tx.type === "income" ? "Income" : categoryName(tx.categoryId)}
+                {tx.recurringId && <span className="tx-recurring"> · ↻ Monthly</span>}
+              </span>
             </span>
-          </div>
-          <span className={`tx-amount ${tx.type}`}>
-            {tx.type === "income" ? "+" : "−"}
-            {formatCurrency(tx.amount)}
-          </span>
+            <span className={`tx-amount ${tx.type}`}>
+              {tx.type === "income" ? "+" : "−"}
+              {formatCurrency(tx.amount)}
+            </span>
+          </button>
           <button
             type="button"
             className="icon-button"

@@ -1,24 +1,70 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import { useCloudBudgetData } from "./cloudStorage";
-import { currentMonthKey, downloadCsv, formatMonthLabel, monthKeyOf, shiftMonth } from "./utils";
+import {
+  currentMonthKey,
+  downloadCsv,
+  formatMonthLabel,
+  monthKeyOf,
+  shiftMonth,
+  todayISO,
+} from "./utils";
+import { generateDueTransactions } from "./recurring";
 import { useTheme } from "./useTheme";
 import { Dashboard } from "./sections/Dashboard";
 import { ThisMonth } from "./sections/ThisMonth";
 import { Categories } from "./sections/Categories";
 import { Settings } from "./components/Settings";
 import { SectionMenu } from "./components/SectionMenu";
-import { AddTransactionFab } from "./components/AddTransactionFab";
+import { Sheet } from "./components/Sheet";
+import { TransactionForm } from "./components/TransactionForm";
+import { UndoToast } from "./components/UndoToast";
 import type { MonthlyTotal } from "./components/TrendChart";
-import { SECTION_LABELS, type CategoryMode, type Section, type TransactionType } from "./types";
+import {
+  SECTION_LABELS,
+  type Category,
+  type CategoryMode,
+  type RecurringRule,
+  type Section,
+  type Transaction,
+  type TransactionInput,
+} from "./types";
 
 const TREND_MONTHS = 6;
+const UNDO_MS = 5000;
 
 export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => void }) {
   const { data, loading, update } = useCloudBudgetData(user.uid);
   const [monthKey, setMonthKey] = useState(currentMonthKey());
   const [section, setSection] = useState<Section>("dashboard");
   const { theme, toggleTheme } = useTheme();
+
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editing, setEditing] = useState<Transaction | null>(null);
+  const [sheetKey, setSheetKey] = useState(0);
+
+  const [toast, setToast] = useState<{ message: string; undo: () => void } | null>(null);
+  const toastTimer = useRef<number | undefined>(undefined);
+
+  // An installed PWA can stay open in the background for days, so refresh
+  // "today" whenever it comes back to the foreground.
+  const [today, setToday] = useState(todayISO());
+  useEffect(() => {
+    function refresh() {
+      if (document.visibilityState === "visible") setToday(todayISO());
+    }
+    document.addEventListener("visibilitychange", refresh);
+    return () => document.removeEventListener("visibilitychange", refresh);
+  }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    update((prev) => generateDueTransactions(prev, today));
+    // `update` is recreated every render; the inputs that matter are listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, data.recurring, today]);
+
+  useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
   const monthTransactions = useMemo(
     () => data.transactions.filter((t) => monthKeyOf(t.date) === monthKey),
@@ -68,6 +114,18 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
     }));
   }, [data.transactions, monthKey]);
 
+  function showUndo(message: string, undo: () => void) {
+    window.clearTimeout(toastTimer.current);
+    setToast({ message, undo });
+    toastTimer.current = window.setTimeout(() => setToast(null), UNDO_MS);
+  }
+
+  function handleUndo() {
+    toast?.undo();
+    window.clearTimeout(toastTimer.current);
+    setToast(null);
+  }
+
   function addCategory(name: string, budget: number, mode: CategoryMode) {
     update((prev) => ({
       ...prev,
@@ -75,38 +133,82 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
     }));
   }
 
-  function updateCategoryBudget(id: string, budget: number) {
+  function updateCategory(id: string, patch: Partial<Omit<Category, "id">>) {
     update((prev) => ({
       ...prev,
-      categories: prev.categories.map((c) => (c.id === id ? { ...c, budget } : c)),
+      categories: prev.categories.map((c) => (c.id === id ? { ...c, ...patch } : c)),
     }));
   }
 
   function removeCategory(id: string) {
-    update((prev) => ({
-      ...prev,
-      categories: prev.categories.filter((c) => c.id !== id),
-    }));
+    const index = data.categories.findIndex((c) => c.id === id);
+    if (index < 0) return;
+    const removed = data.categories[index];
+    update((prev) => ({ ...prev, categories: prev.categories.filter((c) => c.id !== id) }));
+    showUndo(`"${removed.name || "Category"}" deleted`, () =>
+      update((prev) => {
+        if (prev.categories.some((c) => c.id === id)) return prev;
+        const categories = [...prev.categories];
+        categories.splice(Math.min(index, categories.length), 0, removed);
+        return { ...prev, categories };
+      }),
+    );
   }
 
-  function addTransaction(tx: {
-    date: string;
-    type: TransactionType;
-    amount: number;
-    categoryId: string | null;
-    note: string;
-  }) {
+  function addTransaction(tx: TransactionInput, repeat: boolean) {
+    update((prev) => {
+      const id = crypto.randomUUID();
+      if (!repeat) return { ...prev, transactions: [...prev.transactions, { id, ...tx }] };
+      const rule: RecurringRule = {
+        id: crypto.randomUUID(),
+        type: tx.type,
+        amount: tx.amount,
+        categoryId: tx.categoryId,
+        note: tx.note,
+        dayOfMonth: Number(tx.date.slice(8, 10)),
+        lastGeneratedMonth: monthKeyOf(tx.date),
+      };
+      return {
+        ...prev,
+        transactions: [...prev.transactions, { id, ...tx, recurringId: rule.id }],
+        recurring: [...prev.recurring, rule],
+      };
+    });
+  }
+
+  function editTransaction(id: string, tx: TransactionInput) {
     update((prev) => ({
       ...prev,
-      transactions: [...prev.transactions, { id: crypto.randomUUID(), ...tx }],
+      transactions: prev.transactions.map((t) => (t.id === id ? { ...t, ...tx } : t)),
     }));
   }
 
   function removeTransaction(id: string) {
-    update((prev) => ({
-      ...prev,
-      transactions: prev.transactions.filter((t) => t.id !== id),
-    }));
+    const removed = data.transactions.find((t) => t.id === id);
+    if (!removed) return;
+    update((prev) => ({ ...prev, transactions: prev.transactions.filter((t) => t.id !== id) }));
+    showUndo("Transaction deleted", () =>
+      update((prev) =>
+        prev.transactions.some((t) => t.id === id)
+          ? prev
+          : { ...prev, transactions: [...prev.transactions, removed] },
+      ),
+    );
+  }
+
+  function stopRecurring(id: string) {
+    const index = data.recurring.findIndex((r) => r.id === id);
+    if (index < 0) return;
+    const removed = data.recurring[index];
+    update((prev) => ({ ...prev, recurring: prev.recurring.filter((r) => r.id !== id) }));
+    showUndo("Recurring transaction stopped", () =>
+      update((prev) => {
+        if (prev.recurring.some((r) => r.id === id)) return prev;
+        const recurring = [...prev.recurring];
+        recurring.splice(Math.min(index, recurring.length), 0, removed);
+        return { ...prev, recurring };
+      }),
+    );
   }
 
   function exportCsv() {
@@ -127,6 +229,20 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
     downloadCsv(`budget-transactions-${monthKey}.csv`, rows);
   }
 
+  function openAddSheet() {
+    setEditing(null);
+    setSheetKey((k) => k + 1);
+    setSheetOpen(true);
+  }
+
+  function openEditSheet(tx: Transaction) {
+    setEditing(tx);
+    setSheetKey((k) => k + 1);
+    setSheetOpen(true);
+  }
+
+  const closeSheet = useCallback(() => setSheetOpen(false), []);
+
   if (loading) {
     return <p className="empty-state" style={{ textAlign: "center", padding: 40 }}>Loading your budget…</p>;
   }
@@ -140,6 +256,8 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
 
       {section === "dashboard" && (
         <Dashboard
+          monthKey={monthKey}
+          onMonthChange={setMonthKey}
           totals={totals}
           trendMonths={trendMonths}
           categories={data.categories}
@@ -153,7 +271,10 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
           onMonthChange={setMonthKey}
           transactions={monthTransactions}
           categories={data.categories}
+          recurring={data.recurring}
+          onEditTransaction={openEditSheet}
           onRemoveTransaction={removeTransaction}
+          onStopRecurring={stopRecurring}
           onExportCsv={exportCsv}
         />
       )}
@@ -161,7 +282,7 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
       {section === "categories" && (
         <Categories
           categories={data.categories}
-          onUpdateBudget={updateCategoryBudget}
+          onUpdate={updateCategory}
           onRemove={removeCategory}
           onAddCategory={addCategory}
         />
@@ -171,7 +292,29 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
         <Settings user={user} theme={theme} onToggleTheme={toggleTheme} onSignOut={onSignOut} />
       )}
 
-      <AddTransactionFab categories={data.categories} onAdd={addTransaction} />
+      <button type="button" className="fab" aria-label="Add a transaction" onClick={openAddSheet}>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      </button>
+
+      <Sheet open={sheetOpen} title={editing ? "Edit transaction" : "Add a transaction"} onClose={closeSheet}>
+        <TransactionForm
+          key={sheetKey}
+          categories={data.categories}
+          initial={editing ?? undefined}
+          allowRepeat={!editing}
+          submitLabel={editing ? "Save" : "Add"}
+          onSubmit={(tx, repeat) => {
+            if (editing) editTransaction(editing.id, tx);
+            else addTransaction(tx, repeat);
+            closeSheet();
+          }}
+        />
+      </Sheet>
+
+      {toast && <UndoToast message={toast.message} onUndo={handleUndo} />}
     </>
   );
 }

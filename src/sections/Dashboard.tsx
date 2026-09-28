@@ -1,14 +1,19 @@
 import { StatTile } from "../components/StatTile";
 import { CategoryMeter } from "../components/CategoryMeter";
+import { MonthNav } from "../components/MonthNav";
 import { TrendChart, type MonthlyTotal } from "../components/TrendChart";
 import type { Category } from "../types";
 
 export function Dashboard({
+  monthKey,
+  onMonthChange,
   totals,
   trendMonths,
   categories,
   spentByCategory,
 }: {
+  monthKey: string;
+  onMonthChange: (next: string) => void;
   totals: { income: number; expenses: number; remaining: number };
   trendMonths: MonthlyTotal[];
   categories: Category[];
@@ -16,6 +21,10 @@ export function Dashboard({
 }) {
   return (
     <>
+      <div className="month-nav-row">
+        <MonthNav monthKey={monthKey} onChange={onMonthChange} />
+      </div>
+
       <div className="stat-row">
         <StatTile label="Income" value={totals.income} />
         <StatTile label="Expenses" value={totals.expenses} />
