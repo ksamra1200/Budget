@@ -1,14 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import { useCloudBudgetData } from "./cloudStorage";
-import {
-  currentMonthKey,
-  downloadCsv,
-  formatMonthLabel,
-  monthKeyOf,
-  shiftMonth,
-  todayISO,
-} from "./utils";
+import { currentMonthKey, downloadCsv, monthKeyOf, todayISO } from "./utils";
 import { generateDueTransactions } from "./recurring";
 import { useTheme } from "./useTheme";
 import { Dashboard } from "./sections/Dashboard";
@@ -19,7 +12,6 @@ import { SectionMenu } from "./components/SectionMenu";
 import { Sheet } from "./components/Sheet";
 import { TransactionForm } from "./components/TransactionForm";
 import { UndoToast } from "./components/UndoToast";
-import type { MonthlyTotal } from "./components/TrendChart";
 import {
   SECTION_LABELS,
   type Category,
@@ -30,7 +22,6 @@ import {
   type TransactionInput,
 } from "./types";
 
-const TREND_MONTHS = 6;
 const UNDO_MS = 5000;
 
 export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => void }) {
@@ -90,29 +81,6 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
     }
     return map;
   }, [monthTransactions]);
-
-  const trendMonths = useMemo<MonthlyTotal[]>(() => {
-    const keys: string[] = [];
-    for (let i = TREND_MONTHS - 1; i >= 0; i--) keys.push(shiftMonth(monthKey, -i));
-
-    const totals = new Map<string, { income: number; expense: number }>(
-      keys.map((k) => [k, { income: 0, expense: 0 }]),
-    );
-    for (const t of data.transactions) {
-      const k = monthKeyOf(t.date);
-      const bucket = totals.get(k);
-      if (!bucket) continue;
-      if (t.type === "income") bucket.income += t.amount;
-      else bucket.expense += t.amount;
-    }
-
-    return keys.map((k) => ({
-      key: k,
-      label: formatMonthLabel(k).split(" ")[0].slice(0, 3),
-      income: totals.get(k)!.income,
-      expense: totals.get(k)!.expense,
-    }));
-  }, [data.transactions, monthKey]);
 
   function showUndo(message: string, undo: () => void) {
     window.clearTimeout(toastTimer.current);
@@ -259,7 +227,6 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
           monthKey={monthKey}
           onMonthChange={setMonthKey}
           totals={totals}
-          trendMonths={trendMonths}
           categories={data.categories}
           spentByCategory={spentByCategory}
         />

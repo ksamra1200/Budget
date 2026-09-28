@@ -1,21 +1,19 @@
 import { StatTile } from "../components/StatTile";
 import { CategoryMeter } from "../components/CategoryMeter";
 import { MonthNav } from "../components/MonthNav";
-import { TrendChart, type MonthlyTotal } from "../components/TrendChart";
+import { BudgetDonut } from "../components/BudgetDonut";
 import type { Category } from "../types";
 
 export function Dashboard({
   monthKey,
   onMonthChange,
   totals,
-  trendMonths,
   categories,
   spentByCategory,
 }: {
   monthKey: string;
   onMonthChange: (next: string) => void;
   totals: { income: number; expenses: number; remaining: number };
-  trendMonths: MonthlyTotal[];
   categories: Category[];
   spentByCategory: Map<string, number>;
 }) {
@@ -36,8 +34,8 @@ export function Dashboard({
       </div>
 
       <section className="card">
-        <h2>Income vs. expenses</h2>
-        <TrendChart months={trendMonths} />
+        <h2>Budget breakdown</h2>
+        <BudgetDonut categories={categories} spentByCategory={spentByCategory} />
       </section>
 
       <section className="card">
