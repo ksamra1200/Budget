@@ -282,6 +282,13 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
     downloadCsv(`budget-transactions-${monthKey}.csv`, rows);
   }
 
+  function changeSection(next: Section) {
+    if (next === section) return;
+    // Start each section at the top, like switching tabs in an app.
+    window.scrollTo(0, 0);
+    setSection(next);
+  }
+
   function openAddSheet() {
     setEditing(null);
     setSheetKey((k) => k + 1);
@@ -303,74 +310,79 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
   return (
     <>
       <header className="app-header">
-        <h1 className="app-title">{SECTION_LABELS[section]}</h1>
-        <SectionMenu section={section} onChange={setSection} />
+        {/* Keyed by section so the title and page re-run their entrance animation on each switch. */}
+        <h1 key={section} className="app-title section-enter">
+          {SECTION_LABELS[section]}
+        </h1>
+        <SectionMenu section={section} onChange={changeSection} />
       </header>
 
-      {section === "dashboard" && (
-        <Dashboard
-          monthKey={monthKey}
-          onMonthChange={setMonthKey}
-          totals={totals}
-          categories={data.categories}
-          spentByCategory={spentByCategory}
-          budgets={budgets}
-          alerts={alerts}
-        />
-      )}
+      <main key={section} className="section-view section-enter">
+        {section === "dashboard" && (
+          <Dashboard
+            monthKey={monthKey}
+            onMonthChange={setMonthKey}
+            totals={totals}
+            categories={data.categories}
+            spentByCategory={spentByCategory}
+            budgets={budgets}
+            alerts={alerts}
+          />
+        )}
 
-      {section === "thisMonth" && (
-        <ThisMonth
-          monthKey={monthKey}
-          onMonthChange={setMonthKey}
-          transactions={monthTransactions}
-          allTransactions={data.transactions}
-          categories={data.categories}
-          recurring={data.recurring}
-          onEditTransaction={openEditSheet}
-          onRemoveTransaction={removeTransaction}
-          onStopRecurring={stopRecurring}
-          onExportCsv={exportCsv}
-        />
-      )}
+        {section === "thisMonth" && (
+          <ThisMonth
+            monthKey={monthKey}
+            onMonthChange={setMonthKey}
+            transactions={monthTransactions}
+            allTransactions={data.transactions}
+            categories={data.categories}
+            recurring={data.recurring}
+            onEditTransaction={openEditSheet}
+            onRemoveTransaction={removeTransaction}
+            onStopRecurring={stopRecurring}
+            onExportCsv={exportCsv}
+          />
+        )}
 
-      {section === "reports" && (
-        <Reports
-          monthKey={monthKey}
-          onMonthChange={setMonthKey}
-          transactions={data.transactions}
-          categories={data.categories}
-        />
-      )}
+        {section === "reports" && (
+          <Reports
+            monthKey={monthKey}
+            onMonthChange={setMonthKey}
+            transactions={data.transactions}
+            categories={data.categories}
+          />
+        )}
 
-      {section === "goals" && (
-        <Goals goals={data.goals} onAdd={addGoal} onContribute={contributeToGoal} onRemove={removeGoal} />
-      )}
+        {section === "goals" && (
+          <Goals goals={data.goals} onAdd={addGoal} onContribute={contributeToGoal} onRemove={removeGoal} />
+        )}
 
-      {section === "categories" && (
-        <Categories
-          categories={data.categories}
-          rules={data.rules}
-          onUpdate={updateCategory}
-          onRemove={removeCategory}
-          onAddCategory={addCategory}
-          onAddRule={addRule}
-          onRemoveRule={removeRule}
-        />
-      )}
+        {section === "categories" && (
+          <Categories
+            categories={data.categories}
+            rules={data.rules}
+            onUpdate={updateCategory}
+            onRemove={removeCategory}
+            onAddCategory={addCategory}
+            onAddRule={addRule}
+            onRemoveRule={removeRule}
+          />
+        )}
 
-      {section === "settings" && (
-        <Settings
-          user={user}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          onSignOut={onSignOut}
-          prefs={prefs}
-          onSetPref={setPref}
-          ownerUid={ownerUid}
-          sharing={sharing}
-        />
-      )}
+        {section === "settings" && (
+          <Settings
+            user={user}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            onSignOut={onSignOut}
+            prefs={prefs}
+            onSetPref={setPref}
+            ownerUid={ownerUid}
+            sharing={sharing}
+          />
+        )}
+      </main>
 
       <button type="button" className="fab" aria-label="Add a transaction" onClick={openAddSheet}>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
