@@ -59,7 +59,7 @@ export function IncomeSpendChart({ months }: { months: MonthTotals[] }) {
     <div className="chart">
       <div className="chart-legend">
         <span className="chart-legend-item">
-          <span className="chart-swatch" style={{ background: "var(--accent)" }} />
+          <span className="chart-swatch" style={{ background: "var(--cat-3)" }} />
           Income
         </span>
         <span className="chart-legend-item">
@@ -90,7 +90,7 @@ export function IncomeSpendChart({ months }: { months: MonthTotals[] }) {
               const dim = active !== null && active !== i;
               return (
                 <g key={m.key} className={dim ? "chart-group dimmed" : "chart-group"}>
-                  <path d={barPath(gx, y(m.income), barW, y(0) - y(m.income))} fill="var(--accent)" />
+                  <path d={barPath(gx, y(m.income), barW, y(0) - y(m.income))} fill="var(--cat-3)" />
                   <path d={barPath(gx + barW + BAR_GAP, y(m.expense), barW, y(0) - y(m.expense))} fill="var(--cat-2)" />
                   <text x={PAD_LEFT + slot * i + slot / 2} y={HEIGHT - 6} textAnchor="middle" className="chart-axis">
                     {m.label}
@@ -120,7 +120,7 @@ export function IncomeSpendChart({ months }: { months: MonthTotals[] }) {
           >
             <div className="chart-tooltip-title">{hovered.label}</div>
             <div className="chart-tooltip-row">
-              <span className="chart-swatch" style={{ background: "var(--accent)" }} />
+              <span className="chart-swatch" style={{ background: "var(--cat-3)" }} />
               Income <strong>{formatCurrency(hovered.income)}</strong>
             </div>
             <div className="chart-tooltip-row">
