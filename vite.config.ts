@@ -7,10 +7,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["apple-touch-icon.png"],
+      includeAssets: ["apple-touch-icon.png", "favicon.png", "logo.png"],
       manifest: {
-        name: "Budget",
-        short_name: "Budget",
+        name: "Solara",
+        short_name: "Solara",
         description: "Track a monthly budget by category, log transactions, and sync across devices.",
         start_url: ".",
         scope: ".",

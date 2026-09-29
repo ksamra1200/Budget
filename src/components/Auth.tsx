@@ -85,7 +85,8 @@ export function AuthScreen() {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <h1 className="app-title auth-title">Budget</h1>
+        <img className="auth-logo" src={`${import.meta.env.BASE_URL}logo.png`} alt="" width={72} height={72} />
+        <h1 className="app-title auth-title">Solara</h1>
         <p className="empty-state auth-subtitle">
           {mode === "signin"
             ? "Sign in to sync your budget across devices."

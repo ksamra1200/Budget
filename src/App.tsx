@@ -279,7 +279,7 @@ export function BudgetApp({ user, onSignOut }: { user: User; onSignOut: () => vo
           t.note,
         ]),
     ];
-    downloadCsv(`budget-transactions-${monthKey}.csv`, rows);
+    downloadCsv(`solara-transactions-${monthKey}.csv`, rows);
   }
 
   function changeSection(next: Section) {

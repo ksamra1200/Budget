@@ -906,6 +906,11 @@ button.icon-button:hover {
   text-align: center;
 }
 
+.auth-logo {
+  display: block;
+  margin: 0 auto 10px;
+}
+
 .auth-title {
   margin: 0 0 6px;
 }
