@@ -23,7 +23,9 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
-      - run: npm run build -- --base=/Budget/
+      # GitHub Pages serves the site at /<repo name>/, so build for whatever
+      # the repo is called (it keeps working if the repo is renamed).
+      - run: npm run build -- --base=/${{ github.event.repository.name }}/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
