@@ -1550,3 +1550,21 @@ button.icon-button:hover {
   font-size: 12px;
   color: var(--text-muted);
 }
+
+/* ---------- No accidental zooming on phones ---------- */
+
+/* Double-tapping (e.g. two quick taps on a button) no longer zooms the page.
+   Pinch-to-zoom still works for anyone who wants to enlarge things. */
+html {
+  touch-action: manipulation;
+}
+
+/* iPhone Safari zooms in on any text box whose text is smaller than 16px
+   when you tap into it. On touch screens, keep every field at 16px. */
+@media (hover: none) and (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
